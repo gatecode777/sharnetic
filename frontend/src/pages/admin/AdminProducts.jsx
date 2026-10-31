@@ -4,6 +4,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import BulkImportModal from '../../components/admin/BulkImportModal';
 import { adminProductAPI } from '../../services/api';
 import { downloadCSV, arrayToCSV, PRODUCT_TEMPLATE_CSV } from '../../utils/csvHelper';
+import { formatImageUrl } from '../../utils/imageHelper';
 import '../../styles/admin/AdminProducts.css';
 
 const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -148,14 +149,7 @@ const AdminProducts = () => {
   };
 
   const getProductImage = (product, index = 0) => {
-    if (product?.images?.length > 0) {
-      const img = product.images[index];
-      if (!img) return '/default-product.png';
-      const url = typeof img === 'string' ? img : img?.url;
-      if (!url) return '/default-product.png';
-      return url.startsWith('http') ? url : `${BASE_URL}/uploads/products/${url}`;
-    }
-    return '/default-product.png';
+    return formatImageUrl(product?.images?.[index]);
   };
 
   const getDiscount = (product) => {
@@ -334,6 +328,7 @@ const AdminProducts = () => {
                   <img
                     src={getProductImage(product)}
                     alt={product.images?.[0]?.alt || product.name}
+                    referrerPolicy="no-referrer"
                     onError={(e) => { e.target.src = '/default-product.png'; }}
                   />
 
@@ -463,6 +458,7 @@ const AdminProducts = () => {
                     <img
                       src={getProductImage(selectedProduct, currentImageIndex)}
                       alt={selectedProduct.images?.[currentImageIndex]?.alt || selectedProduct.name}
+                      referrerPolicy="no-referrer"
                       onError={(e) => { e.target.src = '/default-product.png'; }}
                     />
 

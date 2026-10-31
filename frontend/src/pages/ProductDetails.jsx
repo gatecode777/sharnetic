@@ -3,9 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { productAPI } from '../services/api';
 import EnquiryModal from '../components/EnquiryModal';
+import { formatImageUrl } from '../utils/imageHelper';
 import '../assets/css/productdetails.css';
-
-const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 const ProductDetails = () => {
   const { slug } = useParams();
@@ -18,13 +17,7 @@ const ProductDetails = () => {
   const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
 
   const getProductImage = (prod, imageIndex = 0) => {
-    if (prod?.images?.length > 0 && prod.images[imageIndex]) {
-      const img = prod.images[imageIndex];
-      const url = typeof img === 'string' ? img : img?.url;
-      if (!url) return '/default-product.png';
-      return url.startsWith('http') ? url : `${BASE_URL}/uploads/products/${url}`;
-    }
-    return '/default-product.png';
+    return formatImageUrl(prod?.images?.[imageIndex]);
   };
 
   useEffect(() => {
@@ -127,6 +120,7 @@ const ProductDetails = () => {
                 <img
                   src={getProductImage(product, selectedImage)}
                   alt={product.name}
+                  referrerPolicy="no-referrer"
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     e.target.onerror = null;
@@ -149,6 +143,7 @@ const ProductDetails = () => {
                       <img
                         src={getProductImage(product, index)}
                         alt={`Thumbnail ${index + 1}`}
+                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                       />
                     </button>

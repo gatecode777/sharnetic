@@ -537,7 +537,12 @@ const extractImageUrls = (rawImageField) => {
     });
   }
 
-  return [...new Set(urls)];
+  return [...new Set(urls)].map((u) => {
+    if (/https?:\/\/img[0-9]a\.flixcart\.com/i.test(u)) {
+      return u.replace(/https?:\/\/img[0-9]a\.flixcart\.com/i, 'https://rukminim1.flixcart.com');
+    }
+    return u;
+  });
 };
 
 // ==================== BULK IMPORT PRODUCTS ====================

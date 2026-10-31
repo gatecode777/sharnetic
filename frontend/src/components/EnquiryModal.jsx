@@ -1,6 +1,7 @@
 // frontend/src/components/EnquiryModal.jsx
 import React, { useState, useEffect } from 'react';
 import { enquiryAPI } from '../services/api';
+import { formatImageUrl } from '../utils/imageHelper';
 
 const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' }) => {
   const [formData, setFormData] = useState({
@@ -167,16 +168,9 @@ const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' })
               {product && (
                 <div className="flex items-center space-x-4 bg-gray-50 p-3 rounded-xl border border-gray-200 mb-4">
                   <img
-                    src={(() => {
-                      const rawFirst = product.images?.[0];
-                      const firstUrl = typeof rawFirst === 'string' ? rawFirst : rawFirst?.url;
-                      return firstUrl
-                        ? (firstUrl.startsWith('http')
-                            ? firstUrl
-                            : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/products/${firstUrl}`)
-                        : '/default-product.png';
-                    })()}
+                    src={formatImageUrl(product.images?.[0])}
                     alt={product.name}
+                    referrerPolicy="no-referrer"
                     className="w-16 h-16 object-cover rounded-lg border bg-white flex-shrink-0"
                     onError={(e) => { e.target.onerror = null; e.target.src = '/default-product.png'; }}
                   />

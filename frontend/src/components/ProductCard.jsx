@@ -1,19 +1,12 @@
 // frontend/src/components/ProductCard.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-
-const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+import { formatImageUrl } from '../utils/imageHelper';
 
 const ProductCard = ({ product, onEnquiry }) => {
   if (!product) return null;
 
-  const rawFirst = product.images?.[0];
-  const firstUrl = typeof rawFirst === 'string' ? rawFirst : rawFirst?.url;
-  const imageUrl = firstUrl
-    ? (firstUrl.startsWith('http')
-        ? firstUrl
-        : `${BASE_URL}/uploads/products/${firstUrl}`)
-    : '/default-product.png';
+  const imageUrl = formatImageUrl(product.images?.[0]);
 
   const seller = product.seller || {};
   const sellerName = seller.name || 'Verified Indian Manufacturer';
@@ -34,6 +27,7 @@ const ProductCard = ({ product, onEnquiry }) => {
             <img
               src={imageUrl}
               alt={product.name}
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {
                 e.target.onerror = null;
