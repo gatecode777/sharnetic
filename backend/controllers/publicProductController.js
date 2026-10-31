@@ -7,6 +7,7 @@ exports.getAllProducts = async (req, res) => {
       page = 1,
       limit = 12,
       category,
+      seller,
       tag,
       search,
       sort = "createdAt",
@@ -17,17 +18,19 @@ exports.getAllProducts = async (req, res) => {
 
     const query = { isActive: true };
 
-    // Fix: Accept category ID or name
-    if (category) {
-      // Check if category is an ID (24 char hex) or name
+    // Filter by Category
+    if (category && category !== 'all') {
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(category);
-      
       if (isValidObjectId) {
-        // It's an ID
         query.category = category;
-      } else {
-        // It's a name (for backward compatibility)
-        query.category = category;
+      }
+    }
+
+    // Filter by Seller
+    if (seller && seller !== 'all') {
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(seller);
+      if (isValidObjectId) {
+        query.seller = seller;
       }
     }
 
@@ -62,7 +65,8 @@ exports.getAllProducts = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .select("-__v")
-      .populate('category', 'name slug'); // Populate category details
+      .populate('category', 'name slug')
+      .populate('seller', 'name slug city state rating isVerified trustSeal phone email contactPerson businessType');
 
     res.json({
       success: true,
@@ -83,7 +87,10 @@ exports.getProductById = async (req, res) => {
     const product = await Product.findOne({
       _id: req.params.id,
       isActive: true,
-    }).select("-__v");
+    })
+      .select("-__v")
+      .populate('category', 'name slug')
+      .populate('seller', 'name slug city state address rating totalRatings isVerified trustSeal phone email contactPerson businessType yearEstablished description');
 
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
@@ -102,7 +109,10 @@ exports.getProductBySlug = async (req, res) => {
     const product = await Product.findOne({
       slug: req.params.slug,
       isActive: true,
-    }).select("-__v");
+    })
+      .select("-__v")
+      .populate('category', 'name slug')
+      .populate('seller', 'name slug city state address rating totalRatings isVerified trustSeal phone email contactPerson businessType yearEstablished description');
 
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
@@ -121,11 +131,12 @@ exports.getByCategory = async (req, res) => {
     const { category } = req.params;
     const { page = 1, limit = 12 } = req.query;
 
-    if (!["vegetable", "fruit"].includes(category)) {
-      return res.status(400).json({ success: false, message: "Invalid category" });
+    const query = { isActive: true };
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(category);
+    if (isValidObjectId) {
+      query.category = category;
     }
 
-    const query = { isActive: true, category };
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const totalProducts = await Product.countDocuments(query);
 
@@ -133,7 +144,9 @@ exports.getByCategory = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .select("-__v");
+      .select("-__v")
+      .populate('category', 'name slug')
+      .populate('seller', 'name slug city state rating isVerified trustSeal');
 
     res.json({
       success: true,
@@ -168,7 +181,9 @@ exports.searchProducts = async (req, res) => {
     })
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
-      .select("name slug category pricing images tags unit");
+      .select("name slug category seller pricing images tags unit moq")
+      .populate('category', 'name slug')
+      .populate('seller', 'name slug city state rating isVerified trustSeal');
 
     res.json({ success: true, products, query: q });
   } catch (error) {
@@ -191,7 +206,9 @@ exports.getProductsByTag = async (req, res) => {
     const products = await Product.find({ isActive: true, tags: tag })
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
-      .select("-__v");
+      .select("-__v")
+      .populate('category', 'name slug')
+      .populate('seller', 'name slug city state rating isVerified trustSeal');
 
     res.json({ success: true, products, tag });
   } catch (error) {

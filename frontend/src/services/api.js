@@ -2,8 +2,11 @@
 
 import axios from 'axios';
 
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+export const BASE_URL = API_URL.replace('/api', '');
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -52,9 +55,8 @@ export const userAuth = {
   logout: () => api.post('/users/logout'),
   getProfile: () => api.get('/users/profile'),
   updateProfile: (formData) => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
     const token = localStorage.getItem('token');
-    return fetch(`${apiUrl}/users/profile`, {
+    return fetch(`${API_URL}/users/profile`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -88,6 +90,25 @@ export const adminCategoryAPI = {
   deleteImage: (id) => api.delete(`/categories/${id}/image`),
 };
 
+// ==================== SELLERS / SUPPLIERS ====================
+export const sellerAPI = {
+  getAll: (params) => api.get('/sellers', { params }),
+  getById: (id) => api.get(`/sellers/${id}`),
+  create: (data) => api.post('/sellers', data),
+  update: (id, data) => api.put(`/sellers/${id}`, data),
+  delete: (id) => api.delete(`/sellers/${id}`),
+};
+
+// ==================== ENQUIRIES ====================
+export const enquiryAPI = {
+  create: (data) => api.post('/enquiries', data),
+  getAll: (params) => api.get('/enquiries', { params }),
+  getById: (id) => api.get(`/enquiries/${id}`),
+  updateStatus: (id, status) => api.put(`/enquiries/${id}/status`, { status }),
+  delete: (id) => api.delete(`/enquiries/${id}`),
+  getStats: () => api.get('/enquiries/stats'),
+};
+
 // ==================== PUBLIC PRODUCT API ====================
 export const productAPI = {
   getAll: (params) => api.get('/products', { params }),
@@ -99,33 +120,20 @@ export const productAPI = {
 
 // ==================== ADMIN PRODUCT API ====================
 export const adminProductAPI = {
-  // Listings & stats
   getAll: (params) => api.get('/admin/products', { params }),
   getById: (id) => api.get(`/admin/products/${id}`),
   getStats: () => api.get('/admin/products/stats'),
-
-  // Create (multipart FormData)
   create: (formData) =>
     api.post('/admin/products', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
-
-  // Update (multipart FormData)
   update: (id, formData) =>
     api.put(`/admin/products/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
-
-  // Delete product
   delete: (id) => api.delete(`/admin/products/${id}`),
-
-  // Delete a single image
   deleteImage: (id, filename) => api.delete(`/admin/products/${id}/images/${filename}`),
-
-  // Toggle active/inactive
   toggleActive: (id) => api.put(`/admin/products/${id}/toggle-active`),
-
-  // Toggle in-stock / out-of-stock
   toggleInStock: (id) => api.put(`/admin/products/${id}/toggle-instock`),
 };
 
@@ -133,14 +141,20 @@ export const adminProductAPI = {
 export const dashboardAPI = {
   getStats: async () => {
     try {
-      const [userStats, productStats] = await Promise.all([
+      const [userStats, productStats, enquiryStats] = await Promise.all([
         userAPI.getStats(),
         adminProductAPI.getStats(),
+        enquiryAPI.getStats().catch(() => ({ data: { stats: {} } })),
       ]);
       return {
         data: {
           success: true,
-          stats: { ...userStats.data.stats, ...productStats.data.stats },
+          stats: {
+            ...userStats.data.stats,
+            ...productStats.data.stats,
+            enquiries: enquiryStats.data?.stats?.total || 0,
+            pendingEnquiries: enquiryStats.data?.stats?.pending || 0,
+          },
         },
       };
     } catch {
@@ -149,7 +163,7 @@ export const dashboardAPI = {
   },
 };
 
-// ==================== CART ====================
+// ==================== CART (DEPRECATED) ====================
 export const cartAPI = {
   getCart: () => api.get('/cart'),
   getCartCount: () => api.get('/cart/count'),
@@ -159,22 +173,12 @@ export const cartAPI = {
   clearCart: () => api.delete('/cart/clear'),
 };
 
-// ==================== WISHLIST ====================
-export const wishlistAPI = {
-  getWishlist: () => api.get('/wishlist'),
-  checkWishlist: (productId) => api.get(`/wishlist/check/${productId}`),
-  addToWishlist: (productId) => api.post('/wishlist/add', { productId }),
-  removeFromWishlist: (productId) => api.delete(`/wishlist/remove/${productId}`),
-  clearWishlist: () => api.delete('/wishlist/clear'),
-};
-
-// ==================== ORDERS ====================
+// ==================== ORDERS (DEPRECATED) ====================
 export const orderAPI = {
   createOrder: (data) => api.post('/orders', data),
   getMyOrders: (params = {}) => api.get('/orders/my-orders', { params }),
   getOrderById: (id) => api.get(`/orders/${id}`),
   cancelOrder: (id, data) => api.put(`/orders/${id}/cancel`, data),
-  // Admin
   getAllOrders: (params) => api.get('/admin/orders', { params }),
   updateOrderStatus: (id, data) => api.put(`/admin/orders/${id}/status`, data),
   getOrderStats: () => api.get('/admin/orders/stats'),

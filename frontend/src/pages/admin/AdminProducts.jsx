@@ -4,7 +4,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import { adminProductAPI } from '../../services/api';
 import '../../styles/admin/AdminProducts.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -29,7 +29,7 @@ const AdminProducts = () => {
     const fetchCategories = async () => {
       try {
         const token = localStorage.getItem('adminToken');
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         const res = await fetch(`${apiUrl}/categories?isActive=true`, {
           headers: { Authorization: `Bearer ${token}` },
         });

@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ToastProvider } from './components/Toast';
 import App from './App';
+import './assets/css/tailwind.min.css';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(

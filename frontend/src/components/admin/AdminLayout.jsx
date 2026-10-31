@@ -46,19 +46,19 @@ const AdminLayout = ({ children }) => {
           </Link>
 
           <Link
-            to="/admin/users"
-            className={`nav-item-a ${isActive('/admin/users') ? 'active' : ''}`}
+            to="/admin/enquiries"
+            className={`nav-item-a ${isActive('/admin/enquiries') ? 'active' : ''}`}
           >
-            <i className="fas fa-users"></i>
-            {sidebarOpen && <span>Users</span>}
+            <i className="fas fa-envelope-open-text text-yellow-400"></i>
+            {sidebarOpen && <span>Buyer Enquiries</span>}
           </Link>
 
           <Link
-            to="/admin/categories"
-            className={`nav-item-a ${isActive('/admin/categories') ? 'active' : ''}`}
+            to="/admin/sellers"
+            className={`nav-item-a ${isActive('/admin/sellers') ? 'active' : ''}`}
           >
-            <i className="fas fa-tags"></i>
-            {sidebarOpen && <span>Categories</span>}
+            <i className="fas fa-industry text-blue-400"></i>
+            {sidebarOpen && <span>Suppliers / Sellers</span>}
           </Link>
 
           <Link
@@ -70,28 +70,20 @@ const AdminLayout = ({ children }) => {
           </Link>
 
           <Link
-            to="/admin/orders"
-            className={`nav-item-a ${isActive('/admin/orders') ? 'active' : ''}`}
+            to="/admin/categories"
+            className={`nav-item-a ${isActive('/admin/categories') ? 'active' : ''}`}
           >
-            <i className="fas fa-shopping-cart"></i>
-            {sidebarOpen && <span>Orders</span>}
-          </Link>
-
-          {/* <Link
-            to="/admin/analytics"
-            className={`nav-item-a ${isActive('/admin/analytics') ? 'active' : ''}`}
-          >
-            <i className="fas fa-chart-line"></i>
-            {sidebarOpen && <span>Analytics</span>}
+            <i className="fas fa-tags"></i>
+            {sidebarOpen && <span>Categories</span>}
           </Link>
 
           <Link
-            to="/admin/settings"
-            className={`nav-item-a ${isActive('/admin/settings') ? 'active' : ''}`}
+            to="/admin/users"
+            className={`nav-item-a ${isActive('/admin/users') ? 'active' : ''}`}
           >
-            <i className="fas fa-cog"></i>
-            {sidebarOpen && <span>Settings</span>}
-          </Link> */}
+            <i className="fas fa-users"></i>
+            {sidebarOpen && <span>Users</span>}
+          </Link>
         </nav>
 
         <div className="sidebar-footer">
@@ -120,11 +112,6 @@ const AdminLayout = ({ children }) => {
           </div>
 
           <div className="header-right">
-            <button className="header-icon-btn">
-              <i className="fas fa-bell"></i>
-              <span className="notification-badge">3</span>
-            </button>
-
             <div className="admin-profile">
               <button
                 className="profile-btn"
@@ -139,9 +126,9 @@ const AdminLayout = ({ children }) => {
                 </div>
                 <div className="profile-info">
                   <span className="profile-name">
-                    {adminData.firstName} {adminData.lastName}
+                    {adminData.firstName || 'Admin'} {adminData.lastName || ''}
                   </span>
-                  <span className="profile-role">{adminData.role || 'Admin'}</span>
+                  <span className="profile-role">{adminData.role || 'Super Admin'}</span>
                 </div>
                 <i className="fas fa-chevron-down"></i>
               </button>
@@ -152,10 +139,6 @@ const AdminLayout = ({ children }) => {
                     <i className="fas fa-user"></i>
                     My Profile
                   </Link>
-                  {/* <Link to="/admin/settings" className="dropdown-item">
-                    <i className="fas fa-cog"></i>
-                    Settings
-                  </Link> */}
                   <hr />
                   <button onClick={handleLogout} className="dropdown-item logout">
                     <i className="fas fa-sign-out-alt"></i>

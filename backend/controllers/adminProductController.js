@@ -24,6 +24,7 @@ exports.getAllProducts = async (req, res) => {
       limit = 20,
       search = "",
       category = "all",
+      seller = "all",
       status = "all",
     } = req.query;
 
@@ -39,6 +40,11 @@ exports.getAllProducts = async (req, res) => {
       query.category = category;
     }
 
+    // Filter by seller
+    if (seller && seller !== "all") {
+      query.seller = seller;
+    }
+
     // Filter by active status
     if (status === "active") query.isActive = true;
     else if (status === "inactive") query.isActive = false;
@@ -49,6 +55,7 @@ exports.getAllProducts = async (req, res) => {
 
     const products = await Product.find(query)
       .populate("category", "name slug")
+      .populate("seller", "name city state")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -69,7 +76,9 @@ exports.getAllProducts = async (req, res) => {
 // ==================== GET SINGLE PRODUCT (ADMIN) ====================
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate("category", "name slug");
+    const product = await Product.findById(req.params.id)
+      .populate("category", "name slug")
+      .populate("seller", "name city state");
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
@@ -86,6 +95,9 @@ exports.createProduct = async (req, res) => {
     const {
       name,
       category,
+      seller,
+      moq,
+      unit,
       description,
       price,
       oldPrice,
@@ -96,7 +108,6 @@ exports.createProduct = async (req, res) => {
 
     // Validation
     if (!name || !category || !price) {
-      // Delete uploaded files if validation fails
       if (req.files) {
         req.files.forEach(file => deleteFile(file.filename));
       }
@@ -116,7 +127,7 @@ exports.createProduct = async (req, res) => {
     // Handle uploaded images
     const images = [];
     if (req.files && req.files.length > 0) {
-      req.files.forEach((file, index) => {
+      req.files.forEach((file) => {
         images.push({ 
           url: file.filename, 
           alt: name 
@@ -129,6 +140,9 @@ exports.createProduct = async (req, res) => {
       name: name.trim(),
       slug,
       category,
+      seller: seller || null,
+      moq: moq || "10 Pieces",
+      unit: unit || "Piece",
       description: description || "",
       images,
       pricing: {
@@ -143,9 +157,8 @@ exports.createProduct = async (req, res) => {
     });
 
     await product.save();
-    
-    // Populate category before sending response
     await product.populate("category", "name slug");
+    await product.populate("seller", "name city state");
     
     res.status(201).json({ 
       success: true, 
@@ -154,7 +167,6 @@ exports.createProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("createProduct error:", error);
-    // Delete uploaded files if product creation fails
     if (req.files) {
       req.files.forEach(file => deleteFile(file.filename));
     }
@@ -170,7 +182,6 @@ exports.updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
-      // Delete uploaded files if product not found
       if (req.files) {
         req.files.forEach(file => deleteFile(file.filename));
       }
@@ -180,6 +191,9 @@ exports.updateProduct = async (req, res) => {
     const {
       name,
       category,
+      seller,
+      moq,
+      unit,
       description,
       price,
       oldPrice,
@@ -198,8 +212,11 @@ exports.updateProduct = async (req, res) => {
       product.name = name.trim();
     }
 
-    // Update other fields
+    // Update fields
     if (category) product.category = category;
+    if (seller !== undefined) product.seller = seller || null;
+    if (moq !== undefined) product.moq = moq;
+    if (unit !== undefined) product.unit = unit;
     if (description !== undefined) product.description = description;
 
     // Update pricing
@@ -231,10 +248,8 @@ exports.updateProduct = async (req, res) => {
       }));
       
       if (keepExistingImages === "true" || keepExistingImages === true) {
-        // Keep existing images and add new ones
         product.images = [...product.images, ...newImages];
       } else {
-        // Replace all images - delete old ones
         product.images.forEach(img => deleteFile(img.url));
         product.images = newImages;
       }
@@ -242,6 +257,7 @@ exports.updateProduct = async (req, res) => {
 
     await product.save();
     await product.populate("category", "name slug");
+    await product.populate("seller", "name city state");
     
     res.json({ 
       success: true, 
@@ -250,7 +266,6 @@ exports.updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("updateProduct error:", error);
-    // Delete uploaded files if update fails
     if (req.files) {
       req.files.forEach(file => deleteFile(file.filename));
     }
@@ -268,15 +283,6 @@ exports.deleteProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
-
-    // Check if product has orders (you might want to add this check)
-    // const orderCount = await Order.countDocuments({ "items.product": product._id });
-    // if (orderCount > 0) {
-    //   return res.status(400).json({ 
-    //     success: false, 
-    //     message: `Cannot delete. Product is in ${orderCount} order(s).` 
-    //   });
-    // }
 
     // Delete all product images from disk
     if (product.images && product.images.length > 0) {
@@ -303,17 +309,14 @@ exports.deleteProductImage = async (req, res) => {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Check if image exists in product
     const imageExists = product.images.some(img => img.url === filename);
     if (!imageExists) {
       return res.status(404).json({ success: false, message: "Image not found" });
     }
 
-    // Remove from images array
     product.images = product.images.filter((img) => img.url !== filename);
     await product.save();
 
-    // Delete file from disk
     deleteFile(filename);
 
     res.json({ 

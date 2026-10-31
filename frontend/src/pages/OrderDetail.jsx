@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { orderAPI } from '../services/api';
 import '../assets/css/order-detail.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const IMAGE_URL = BASE_URL.replace('/api', '');
+const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const IMAGE_URL = BASE_URL;
 
 const OrderDetails = () => {
   const { id } = useParams();

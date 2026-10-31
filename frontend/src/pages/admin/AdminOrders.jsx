@@ -3,7 +3,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import { orderAPI } from '../../services/api';
 import '../../styles/admin/AdminOrders.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 const getProductImage = (imageUrl) => {
   if (!imageUrl) return '/default-product.png';

@@ -21,6 +21,23 @@ const ProductSchema = new mongoose.Schema(
       required: true,
     },
 
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Seller",
+    },
+
+    moq: {
+      type: String,
+      default: "10 Pieces",
+      trim: true
+    },
+
+    unit: {
+      type: String,
+      default: "Piece",
+      trim: true
+    },
+
     description: {
       type: String,
       trim: true
@@ -79,5 +96,9 @@ ProductSchema.pre("save", function (next) {
       .replace(/(^-|-$)/g, "");
   }
 });
+
+ProductSchema.index({ seller: 1 });
+ProductSchema.index({ category: 1 });
+ProductSchema.index({ isActive: 1 });
 
 module.exports = mongoose.model("Product", ProductSchema);

@@ -6,8 +6,8 @@ import { orderAPI, addressAPI } from '../services/api';
 import '../assets/css/profile.css';
 
 // Define URLs correctly
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const IMAGE_URL = API_URL.replace('/api', ''); // For static files: http://localhost:3000
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const IMAGE_URL = API_URL.replace('/api', ''); // For static files: http://localhost:5000
 
 const ProfilePage = () => {
   const { user, token, logout, updateUser } = useAuth(); // Add updateUser from context

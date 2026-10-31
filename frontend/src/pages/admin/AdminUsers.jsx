@@ -192,7 +192,7 @@ const AdminUsers = () => {
     }
   };
 
-  const apiUrl = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3000";
+  const apiUrl = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000";
 
   if (loading && users.length === 0) {
     return (

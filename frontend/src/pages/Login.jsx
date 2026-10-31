@@ -44,7 +44,7 @@ const Login = () => {
             <span className="logo-onions">Sharnetic</span>
           </div>
           <h2 className="auth-tagline">Lorem Ipsum<br />Dolor Sit Amet</h2>
-          <p className="auth-sub">SHARNETIC TECHNOLOGIES PRIVATE LIMITED is a fast-growing eCommerce marketplace designed to make online shopping easier and more convenient.</p>
+          <p className="auth-sub">SHARNETIC TECHNOLOGIES PRIVATE LIMITED connects buyers directly with verified manufacturers and wholesale suppliers.</p>
           <div className="auth-badges">
             <span className="auth-badge"><i className="fa fa-leaf"></i> 100% Safe & Secure</span>
             <span className="auth-badge"><i className="fa fa-truck"></i> Fast Delivery</span>

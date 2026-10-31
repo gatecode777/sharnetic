@@ -1,23 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { productAPI, adminCategoryAPI } from '../services/api';
-import { useCart } from '../context/CartContext';
+import { productAPI, adminCategoryAPI, sellerAPI } from '../services/api';
+import ProductCard from '../components/ProductCard';
+import EnquiryModal from '../components/EnquiryModal';
 import '../assets/css/templatemo.css';
 import '../assets/css/tailwind.min.css';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const IMAGE_URL = BASE_URL.replace('/api', '');
+const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const IMAGE_URL = BASE_URL;
 
 const HomeContent = () => {
     const navigate = useNavigate();
-    const { addToCart } = useCart(); // Get addToCart from context
     const [categories, setCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
     const [featuredProducts, setFeaturedProducts] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
-    const [error, setError] = useState('');
-    const [addingToCart, setAddingToCart] = useState(null);
-    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [topSellers, setTopSellers] = useState([]);
+    const [loadingSellers, setLoadingSellers] = useState(true);
+
+    // Quick requirement hero state
+    const [heroRequirement, setHeroRequirement] = useState('');
+    const [heroPhone, setHeroPhone] = useState('');
+
+    // Modal state
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedSeller, setSelectedSeller] = useState(null);
+    const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
 
     useEffect(() => {
         window.scrollTo({
@@ -28,15 +36,8 @@ const HomeContent = () => {
         
         fetchCategories();
         fetchFeaturedProducts();
+        fetchTopSellers();
     }, []);
-
-    // Show toast message
-    const showToast = (message, type = 'success', duration = 3000) => {
-        setToast({ show: true, message, type });
-        setTimeout(() => {
-            setToast({ show: false, message: '', type: 'success' });
-        }, duration);
-    };
 
     // Fetch categories
     const fetchCategories = async () => {
@@ -48,12 +49,9 @@ const HomeContent = () => {
             });
             if (response.data.success) {
                 setCategories(response.data.categories || []);
-            } else {
-                setError('Failed to load categories');
             }
         } catch (err) {
             console.error('Fetch categories error:', err);
-            setError('Failed to load categories');
         } finally {
             setLoadingCategories(false);
         }
@@ -64,7 +62,7 @@ const HomeContent = () => {
         try {
             setLoadingProducts(true);
             const response = await productAPI.getAll({ 
-                limit: 4, 
+                limit: 8, 
                 sort: '-createdAt',
                 isActive: true 
             });
@@ -78,77 +76,38 @@ const HomeContent = () => {
         }
     };
 
-    // Enhanced add to cart function with animation and toast
-    const handleAddToCart = async (product) => {
-        // Check stock
-        if (!product.stock?.inStock) {
-            showToast('This product is out of stock', 'error');
-            return;
-        }
-
-        setAddingToCart(product._id);
-
-        // Add animation class
-        const button = document.getElementById(`add-to-cart-btn-${product._id}`);
-        if (button) {
-            button.classList.add('animate-bounce');
-        }
-
-        // Use the cart context addToCart
-        const result = await addToCart(product._id, 1);
-
-        if (result.success) {
-            showToast(`${product.name} added to cart successfully!`, 'success');
-        } 
-        // else {
-        //     showToast(result.message || 'Failed to add to cart', 'error');
-        // }
-
-        // Remove animation
-        setTimeout(() => {
-            if (button) {
-                button.classList.remove('animate-bounce');
+    // Fetch top sellers
+    const fetchTopSellers = async () => {
+        try {
+            setLoadingSellers(true);
+            const response = await sellerAPI.getAll({ limit: 6 });
+            if (response.data.success) {
+                setTopSellers(response.data.sellers || []);
             }
-            setAddingToCart(null);
-        }, 500);
-    };
-
-    // Buy now function
-    const handleBuyNow = async (product) => {
-        // Check if user is logged in
-        const user = localStorage.getItem('user');
-        if (!user) {
-            showToast('Please login to continue', 'error');
-            setTimeout(() => navigate('/login'), 1500);
-            return;
-        }
-
-        // Check stock
-        if (!product.stock?.inStock) {
-            showToast('This product is out of stock', 'error');
-            return;
-        }
-
-        // Add to cart first, then go to checkout
-        const result = await addToCart(product._id, 1);
-        
-        if (result.success) {
-            navigate('/checkout');
-        } else {
-            showToast(result.message || 'Failed to process', 'error');
+        } catch (err) {
+            console.error('Fetch sellers error:', err);
+        } finally {
+            setLoadingSellers(false);
         }
     };
 
-    const handleCategoryClick = (categoryId, categoryName) => {
-        navigate(`/products?category=${categoryId}`);
+    const handleOpenProductEnquiry = (product) => {
+        setSelectedProduct(product);
+        setSelectedSeller(product.seller || null);
+        setIsEnquiryOpen(true);
     };
 
-    const getProductImage = (product) => {
-        if (product.images?.length > 0) {
-            const img = product.images[0];
-            return img.url?.startsWith('http') ? img.url : `${IMAGE_URL}/uploads/products/${img.url}`;
-        }
-        return '/default-product.png';
+    const handleOpenSellerEnquiry = (seller) => {
+        setSelectedProduct(null);
+        setSelectedSeller(seller);
+        setIsEnquiryOpen(true);
+    };
+
+    const handleHeroSubmit = (e) => {
+        e.preventDefault();
+        setSelectedProduct(null);
+        setSelectedSeller(null);
+        setIsEnquiryOpen(true);
     };
 
     const getCategoryImage = (category) => {
@@ -158,316 +117,353 @@ const HomeContent = () => {
         return null;
     };
 
-    const getDiscount = (product) => {
-        const { price, oldPrice } = product.pricing || {};
-        if (price && oldPrice && oldPrice > price) {
-            return Math.round(((oldPrice - price) / oldPrice) * 100);
-        }
-        return null;
-    };
-
     return (
-        <main className="container mx-auto px-4 py-6">
-            {/* Toast Notification */}
-            {toast.show && (
-                <div className="fixed top-20 right-4 z-50 animate-slide-in">
-                    <div className={`flex items-center p-4 rounded-lg shadow-lg ${
-                        toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-                    } text-white`}>
-                        <i className={`fas ${toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2`}></i>
-                        <span>{toast.message}</span>
+        <main className="bg-gray-50 min-h-screen">
+            {/* Hero Banner */}
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 text-white py-12 px-4 shadow-inner">
+                <div className="container mx-auto max-w-6xl">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                        {/* Hero Text */}
+                        <div className="lg:col-span-7">
+                            <span className="inline-block bg-yellow-400 text-blue-950 font-black text-xs px-3 py-1 rounded-full uppercase tracking-wider mb-4 shadow">
+                                Direct Manufacturer Deals
+                            </span>
+                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight mb-4">
+                                Connect with Verified Indian Manufacturers & Suppliers
+                            </h1>
+                            <p className="text-blue-100 text-base sm:text-lg mb-6 leading-relaxed">
+                                Get instant quotes, bulk discounts, and verified supplier contacts across clothing, home decor, beauty, groceries, and industrial supplies.
+                            </p>
+                            <div className="flex flex-wrap gap-4 text-xs font-semibold text-blue-200">
+                                <div className="flex items-center">
+                                    <i className="fas fa-check-circle text-green-400 mr-2 text-base"></i> 100% Verified GST Suppliers
+                                </div>
+                                <div className="flex items-center">
+                                    <i className="fas fa-bolt text-yellow-400 mr-2 text-base"></i> Fast Buyer Quotes
+                                </div>
+                                <div className="flex items-center">
+                                    <i className="fas fa-handshake text-blue-300 mr-2 text-base"></i> Zero Commission
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Post Requirement Box (IndiaMART style) */}
+                        <div className="lg:col-span-5 bg-white text-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-100">
+                            <div className="border-b pb-3 mb-4">
+                                <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                                    <i className="fas fa-paper-plane text-blue-600 mr-2"></i>
+                                    Post Your Buying Requirement
+                                </h3>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Tell us what you need & get competitive quotes
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleHeroSubmit} className="space-y-3.5">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                                        Product / Service Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Cotton Shirts, Digital Clocks, Spices..."
+                                        value={heroRequirement}
+                                        onChange={(e) => setHeroRequirement(e.target.value)}
+                                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                                        Your Mobile Number
+                                    </label>
+                                    <div className="flex">
+                                        <span className="inline-flex items-center px-3 text-sm text-gray-600 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg font-semibold">
+                                            +91
+                                        </span>
+                                        <input
+                                            type="tel"
+                                            placeholder="Enter 10-digit mobile number"
+                                            value={heroPhone}
+                                            onChange={(e) => setHeroPhone(e.target.value)}
+                                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-r-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 text-sm"
+                                >
+                                    <span>Get Best Price & Quotes</span>
+                                    <i className="fas fa-arrow-right text-xs"></i>
+                                </button>
+                                <p className="text-center text-[11px] text-gray-500">
+                                    <i className="fas fa-shield-alt text-green-600 mr-1"></i> Verified suppliers contact you directly.
+                                </p>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            )}
-
-            {/* Banner Slider */}
-            <div className="banner-slider mb-8">
-                <img
-                    src="/banner.jpg"
-                    alt="Sale Banner"
-                    className="w-full h-auto rounded-lg"
-                    onError={(e) => { e.target.src = '/default-banner.jpg'; }}
-                />
             </div>
 
-            {/* Dynamic Categories Section */}
-            <section id="categories" className="mb-12">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Category</h2>
-                
-                {loadingCategories ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {[...Array(6)].map((_, index) => (
-                            <div key={index} className="category-card-skeleton">
-                                <div className="skeleton-img"></div>
-                                <div className="skeleton-text"></div>
-                            </div>
-                        ))}
+            <div className="container mx-auto px-4 py-10 max-w-6xl">
+                {/* Dynamic Categories Section */}
+                <section id="categories" className="mb-14">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+                                Explore Industry Categories
+                            </h2>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Find specialized manufacturers and wholesalers by industry sector
+                            </p>
+                        </div>
+                        <Link to="/shop" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center">
+                            <span>View All Products</span>
+                            <i className="fas fa-chevron-right text-xs ml-1.5"></i>
+                        </Link>
                     </div>
-                ) : error ? (
-                    <div className="text-center py-8">
-                        <p className="text-red-500">{error}</p>
-                        <button 
-                            onClick={fetchCategories}
-                            className="mt-4 text-blue-600 hover:underline"
-                        >
-                            Try Again
-                        </button>
-                    </div>
-                ) : categories.length === 0 ? (
-                    <div className="text-center py-8">
-                        <p className="text-gray-500">No categories available</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {categories.map((category) => (
-                            <div
-                                key={category._id}
-                                className="category-card cursor-pointer"
-                            >
-                                <div className="category-img">
-                                    {getCategoryImage(category) ? (
-                                        <img
-                                            src={getCategoryImage(category)}
-                                            alt={category.name}
-                                            className="w-full h-full object-contain"
-                                            onError={(e) => { e.target.src = '/default-category.png'; }}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
-                                            <i className="fas fa-tag text-4xl text-gray-400"></i>
-                                        </div>
-                                    )}
-                                </div>
-                                <p className="text-sm font-medium text-gray-700">
-                                    {category.name}
-                                </p>
-                                {category.productCount > 0 && (
-                                    <p className="text-xs text-gray-500 text-center">
-                                        {category.productCount} products
-                                    </p>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </section>
-
-            {/* Today's Deals - Dynamic Products */}
-            <section id="deals" className="mb-12">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-800">Today's Deals</h2>
-                    <Link to="/shop" className="text-blue-600 font-medium hover:underline">View All</Link>
-                </div>
-                
-                {loadingProducts ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {[...Array(5)].map((_, index) => (
-                            <div key={index} className="product-card-skeleton">
-                                <div className="skeleton-img"></div>
-                                <div className="skeleton-text"></div>
-                                <div className="skeleton-price"></div>
-                            </div>
-                        ))}
-                    </div>
-                ) : featuredProducts.length === 0 ? (
-                    <div className="text-center py-8">
-                        <p className="text-gray-500">No products available</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {featuredProducts.map((product) => {
-                            const discount = getDiscount(product);
-                            const imageUrl = getProductImage(product);
-                            const isAdding = addingToCart === product._id;
-                            
-                            return (
-                                <div key={product._id} className="deal-card group hover:shadow-lg transition-all duration-300">
-                                    {/* Product Image */}
-                                    <Link to={`/product/${product.slug}`} className="block relative overflow-hidden rounded-lg">
-                                        <img 
-                                            src={imageUrl} 
-                                            alt={product.name} 
-                                            className="product-img w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                                            onError={(e) => { e.target.src = '/default-product.png'; }}
-                                        />
-                                        {discount && (
-                                            <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
-                                                {discount}% OFF
-                                            </span>
+                    
+                    {loadingCategories ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                            {[...Array(5)].map((_, index) => (
+                                <div key={index} className="h-36 bg-gray-200 animate-pulse rounded-xl"></div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                            {categories.map((category) => (
+                                <Link
+                                    key={category._id}
+                                    to={`/shop?category=${category._id}`}
+                                    className="bg-white rounded-xl p-4 border border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col items-center text-center group"
+                                >
+                                    <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-3 overflow-hidden border border-blue-100 group-hover:scale-105 transition-transform">
+                                        {getCategoryImage(category) ? (
+                                            <img
+                                                src={getCategoryImage(category)}
+                                                alt={category.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { 
+                                                    e.target.onerror = null; 
+                                                    e.target.src = '/default-category.png'; 
+                                                }}
+                                            />
+                                        ) : (
+                                            <i className="fas fa-tags text-2xl text-blue-500"></i>
                                         )}
-                                        {!product.stock?.inStock && (
-                                            <span className="absolute top-2 left-2 bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded z-10">
-                                                Out of Stock
-                                            </span>
-                                        )}
-                                        {product.stock?.inStock && product.stock?.quantity < 10 && (
-                                            <span className="absolute bottom-2 left-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
-                                                Only {product.stock.quantity} left
-                                            </span>
-                                        )}
-                                    </Link>
+                                    </div>
+                                    <h4 className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                                        {category.name}
+                                    </h4>
+                                    <span className="text-[11px] text-gray-500 mt-1 bg-gray-100 px-2 py-0.5 rounded-full">
+                                        {category.productCount || 0}+ Products
+                                    </span>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </section>
 
-                                    {/* Product Info */}
-                                    <div className="p-3">
-                                        <Link to={`/product/${product.slug}`}>
-                                            <h3 className="text-sm font-medium text-gray-800 mb-2 hover:text-blue-600 transition-colors line-clamp-2 min-h-[40px]">
-                                                {product.name}
-                                            </h3>
-                                        </Link>
+                {/* Featured Products Showcase (IndiaMART Product Cards with Seller Name & Enquiry Button) */}
+                <section className="mb-14">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+                                Wholesale Supplier Deals
+                            </span>
+                            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+                                Trending Products & Wholesale Deals
+                            </h2>
+                        </div>
+                        <Link to="/shop" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center">
+                            <span>Browse Catalog</span>
+                            <i className="fas fa-arrow-right text-xs ml-1.5"></i>
+                        </Link>
+                    </div>
 
-                                        {/* Category */}
-                                        {product.category && (
-                                            <div className="text-xs text-gray-500 mb-2">
-                                                {typeof product.category === 'object' ? product.category.name : 'Uncategorized'}
-                                            </div>
-                                        )}
+                    {loadingProducts ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {[...Array(4)].map((_, index) => (
+                                <div key={index} className="h-80 bg-gray-200 animate-pulse rounded-xl"></div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {featuredProducts.map((product) => (
+                                <ProductCard
+                                    key={product._id}
+                                    product={product}
+                                    onEnquiry={handleOpenProductEnquiry}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
 
-                                        {/* Price Section */}
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div>
-                                                <span className="text-lg font-bold text-gray-900">
-                                                    ₹{product.pricing?.price?.toLocaleString()}
-                                                </span>
-                                                {product.pricing?.oldPrice && (
-                                                    <span className="text-sm text-gray-400 line-through ml-2">
-                                                        ₹{product.pricing.oldPrice.toLocaleString()}
+                {/* Verified Sellers / Suppliers Section (IndiaMART Supplier Spotlight) */}
+                <section className="mb-14">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-green-600">
+                                Verified Manufacturers & Exporters
+                            </span>
+                            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+                                Top Verified Suppliers by Main Category
+                            </h2>
+                        </div>
+                        <Link to="/sellers" className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center">
+                            <span>All Suppliers Directory</span>
+                            <i className="fas fa-chevron-right text-xs ml-1.5"></i>
+                        </Link>
+                    </div>
+
+                    {loadingSellers ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[...Array(3)].map((_, index) => (
+                                <div key={index} className="h-56 bg-gray-200 animate-pulse rounded-xl"></div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {topSellers.map((seller) => (
+                                <div
+                                    key={seller._id}
+                                    className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between"
+                                >
+                                    <div>
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex-1">
+                                                <div className="flex items-center space-x-1.5 mb-1">
+                                                    <span className="text-[10px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded uppercase tracking-wider">
+                                                        {seller.mainCategory?.name || 'Supplier'}
                                                     </span>
-                                                )}
+                                                    {seller.isVerified && (
+                                                        <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded flex items-center">
+                                                            <i className="fas fa-check-circle text-green-600 mr-1"></i> Verified
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <Link to={`/seller/${seller.slug || seller._id}`}>
+                                                    <h3 className="text-base font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                                                        {seller.name}
+                                                    </h3>
+                                                </Link>
                                             </div>
-                                            {discount && (
-                                                <span className="text-xs text-green-600 font-medium">
-                                                    Save {discount}%
+                                            {seller.rating && (
+                                                <span className="bg-amber-50 text-amber-800 font-extrabold text-xs px-2 py-1 rounded-md border border-amber-200 flex items-center">
+                                                    <i className="fas fa-star text-amber-500 mr-1 text-[10px]"></i>
+                                                    {seller.rating}
                                                 </span>
                                             )}
                                         </div>
 
-                                        {/* Action Buttons */}
-                                        <div className="flex gap-2">
-                                            <button
-                                                id={`add-to-cart-btn-${product._id}`}
-                                                onClick={() => handleAddToCart(product)}
-                                                disabled={!product.stock?.inStock || isAdding}
-                                                className={`add-to-cart-btn ${
-                                                    product.stock?.inStock && !isAdding
-                                                        ? 'add-to-cart-btn'
-                                                        : 'add-to-cart-btn cursor-not-allowed'
-                                                }`}
-                                            >
-                                                {isAdding ? (
-                                                    <i className="fas fa-spinner fa-spin mr-1"></i>
-                                                ) : (
-                                                    <i className="fas fa-shopping-cart mr-1"></i>
-                                                )}
-                                                {isAdding ? 'Adding...' : 'Add to Cart'}
-                                            </button>
+                                        <p className="text-xs text-gray-600 line-clamp-2 mb-3">
+                                            {seller.description || 'Verified manufacturer offering bulk wholesale catalog with assured delivery.'}
+                                        </p>
+
+                                        <div className="space-y-1 text-xs text-gray-500 border-t border-gray-100 pt-3">
+                                            <div className="flex items-center">
+                                                <i className="fas fa-map-marker-alt text-gray-400 w-4"></i>
+                                                <span>{seller.city}, {seller.state}</span>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <i className="fas fa-briefcase text-gray-400 w-4"></i>
+                                                <span>{seller.businessType} (Est. {seller.yearEstablished})</span>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <i className="fas fa-boxes text-gray-400 w-4"></i>
+                                                <span className="font-semibold text-gray-700">{seller.productCount || 0} Products in Catalog</span>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center space-x-2">
+                                        <button
+                                            onClick={() => handleOpenSellerEnquiry(seller)}
+                                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-1.5"
+                                        >
+                                            <i className="fas fa-envelope"></i>
+                                            <span>Enquiry</span>
+                                        </button>
+                                        <Link
+                                            to={`/seller/${seller.slug || seller._id}`}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                                        >
+                                            Catalog
+                                        </Link>
+                                    </div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </section>
+                            ))}
+                        </div>
+                    )}
+                </section>
 
-            {/* About Section */}
-            <section id="about" className="bg-white p-8 rounded-lg mb-12 shadow-sm">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">About SHARNETIC TECHNOLOGIES</h2>
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <p className="text-gray-600 mb-4">
-                            SHARNETIC TECHNOLOGIES PRIVATE LIMITED is a fast-growing eCommerce marketplace designed to make
-                            online shopping simple, affordable, and accessible for everyone.
+                {/* Value Proposition */}
+                <section className="bg-gradient-to-br from-white to-blue-50 rounded-2xl border border-blue-100 p-8 shadow-sm">
+                    <div className="text-center max-w-2xl mx-auto mb-8">
+                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                            India's Trusted Trade Platform
+                        </span>
+                        <h2 className="text-2xl font-extrabold text-gray-900 mt-1">
+                            Why Source on Sharnetic?
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Everything you need to source directly from verified Indian factories & distributors
                         </p>
-                        <p className="text-gray-600 mb-6">
-                            From fashion to home essentials, electronics, and groceries, we deliver quality products
-                            at unbeatable prices right to your doorstep.
-                        </p>
-                        <Link
-                            to="/shop"
-                            className="inline-block bg-blue-600 text-white px-6 py-3 rounded font-medium hover:bg-blue-700 transition"
-                        >
-                            Explore All Products
-                        </Link>
                     </div>
-                    <div>
-                        <img 
-                            src="/about.jpg" 
-                            alt="About Us" 
-                            className="w-full h-auto rounded-lg"
-                            onError={(e) => { e.target.src = '/default-about.jpg'; }}
-                        />
-                    </div>
-                </div>
-            </section>
 
-            {/* Why Choose Us */}
-            <section className="mb-12">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Why Choose SHARNETIC TECHNOLOGIES?</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-lg text-center shadow-sm hover:shadow-md transition group">
-                        <div className="text-blue-600 text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i className="fas fa-shipping-fast"></i>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm text-center">
+                            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 text-xl">
+                                <i className="fas fa-industry"></i>
+                            </div>
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">Direct Factory Prices</h4>
+                            <p className="text-xs text-gray-500">Cut middlemen. Negotiate bulk wholesale rates directly with manufacturers.</p>
                         </div>
-                        <h3 className="font-bold text-lg mb-2">Free Shipping</h3>
-                        <p className="text-gray-600">On orders above ₹499</p>
-                    </div>
-                    <div className="bg-white p-6 rounded-lg text-center shadow-sm hover:shadow-md transition group">
-                        <div className="text-blue-600 text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i className="fas fa-shield-alt"></i>
-                        </div>
-                        <h3 className="font-bold text-lg mb-2">Safe & Secure</h3>
-                        <p className="text-gray-600">100% secure payments</p>
-                    </div>
-                    <div className="bg-white p-6 rounded-lg text-center shadow-sm hover:shadow-md transition group">
-                        <div className="text-blue-600 text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i className="fas fa-undo-alt"></i>
-                        </div>
-                        <h3 className="font-bold text-lg mb-2">Easy Returns</h3>
-                        <p className="text-gray-600">10-day return policy</p>
-                    </div>
-                    <div className="bg-white p-6 rounded-lg text-center shadow-sm hover:shadow-md transition group">
-                        <div className="text-blue-600 text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <i className="fas fa-headset"></i>
-                        </div>
-                        <h3 className="font-bold text-lg mb-2">24/7 Support</h3>
-                        <p className="text-gray-600">Customer care always available</p>
-                    </div>
-                </div>
-            </section>
 
-            {/* Add CSS for animations */}
-            <style jsx>{`
-                @keyframes bounce {
-                    0%, 100% { transform: scale(1); }
-                    50% { transform: scale(0.95); }
+                        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm text-center">
+                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 text-xl">
+                                <i className="fas fa-shield-alt"></i>
+                            </div>
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">GST Verified Suppliers</h4>
+                            <p className="text-xs text-gray-500">All registered suppliers have verified credentials, GSTIN, and business addresses.</p>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm text-center">
+                            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mx-auto mb-3 text-xl">
+                                <i className="fas fa-comments"></i>
+                            </div>
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">Instant Quotes</h4>
+                            <p className="text-xs text-gray-500">Submit an enquiry and receive multiple competitive quotes on Call & WhatsApp.</p>
+                        </div>
+
+                        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm text-center">
+                            <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mx-auto mb-3 text-xl">
+                                <i className="fas fa-truck-moving"></i>
+                            </div>
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">Pan-India Reach</h4>
+                            <p className="text-xs text-gray-500">Suppliers ready to dispatch bulk lots across major industrial hubs in India.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {/* Global Enquiry Modal */}
+            <EnquiryModal
+                isOpen={isEnquiryOpen}
+                onClose={() => setIsEnquiryOpen(false)}
+                product={selectedProduct}
+                seller={selectedSeller}
+                initialMessage={
+                    heroRequirement
+                        ? `Requirement: ${heroRequirement}. Please contact me at ${heroPhone || 'my phone'} with wholesale quotation.`
+                        : ''
                 }
-                
-                .animate-bounce {
-                    animation: bounce 0.3s ease-in-out;
-                }
-                
-                @keyframes slideIn {
-                    from {
-                        transform: translateX(100%);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                }
-                
-                .animate-slide-in {
-                    animation: slideIn 0.3s ease-out;
-                }
-                
-                .line-clamp-2 {
-                    display: -webkit-box;
-                    -webkit-line-clamp: 2;
-                    -webkit-box-orient: vertical;
-                    overflow: hidden;
-                }
-            `}</style>
+            />
         </main>
     );
 };

@@ -5,7 +5,7 @@ import { adminCategoryAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import '../../styles/admin/AdminCategories.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const IMAGE_URL = API_URL.replace('/api', '');
 
 const emptyForm = {

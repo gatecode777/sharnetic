@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
-import { adminProductAPI } from '../../services/api';
+import { adminProductAPI, adminCategoryAPI, sellerAPI } from '../../services/api';
 import '../../styles/admin/ProductForm.css';
 
 const MAX_IMAGES = 4;
-const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 const ProductForm = () => {
   const { id } = useParams();
@@ -19,6 +19,9 @@ const ProductForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     category: '',
+    seller: '',
+    moq: '10 Pieces',
+    unit: 'Piece',
     description: '',
     price: '',
     oldPrice: '',
@@ -31,6 +34,7 @@ const ProductForm = () => {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [sellers, setSellers] = useState([]);
 
   // Fetch product if in edit mode
   useEffect(() => {
@@ -39,27 +43,29 @@ const ProductForm = () => {
     }
   }, [id]);
 
-  // Fetch categories
+  // Fetch categories and sellers
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchMetadata = async () => {
       try {
-        const token = localStorage.getItem('adminToken');
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        const res = await fetch(`${apiUrl}/categories?isActive=true`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.success) {
-          setCategories(data.categories);
-          if (!isEditMode && data.categories.length > 0) {
-            setFormData((prev) => ({ ...prev, category: data.categories[0]._id }));
+        const [catRes, sellerRes] = await Promise.all([
+          adminCategoryAPI.getAll({ isActive: true }),
+          sellerAPI.getAll({ limit: 100 }),
+        ]);
+
+        if (catRes.data.success) {
+          setCategories(catRes.data.categories || []);
+          if (!isEditMode && catRes.data.categories?.length > 0) {
+            setFormData((prev) => ({ ...prev, category: catRes.data.categories[0]._id }));
           }
         }
+        if (sellerRes.data.success) {
+          setSellers(sellerRes.data.sellers || []);
+        }
       } catch (e) {
-        console.error('fetchCategories error:', e);
+        console.error('fetchMetadata error:', e);
       }
     };
-    fetchCategories();
+    fetchMetadata();
   }, []);
 
   const fetchProduct = async () => {
@@ -71,6 +77,9 @@ const ProductForm = () => {
         setFormData({
           name: p.name || '',
           category: p.category?._id || p.category || '',
+          seller: p.seller?._id || p.seller || '',
+          moq: p.moq || '10 Pieces',
+          unit: p.unit || 'Piece',
           description: p.description || '',
           price: p.pricing?.price ?? '',
           oldPrice: p.pricing?.oldPrice ?? '',
@@ -98,30 +107,20 @@ const ProductForm = () => {
     }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    const currentCount = existingImages.length + imageFiles.length;
-    const allowedCount = MAX_IMAGES - currentCount;
-
-    if (allowedCount <= 0) {
-      alert(`Maximum ${MAX_IMAGES} images allowed. Remove existing ones first.`);
+    const totalImages = existingImages.length + imageFiles.length + files.length;
+    
+    if (totalImages > MAX_IMAGES) {
+      setError(`Maximum ${MAX_IMAGES} images allowed`);
       return;
     }
 
-    const validFiles = files.filter((file) => {
-      if (!file.type.startsWith('image/')) {
-        alert(`${file.name} is not an image`);
-        return false;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`${file.name} exceeds 5MB limit`);
-        return false;
-      }
-      return true;
-    }).slice(0, allowedCount);
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
 
-    setImageFiles((prev) => [...prev, ...validFiles]);
-    setImagePreviews((prev) => [...prev, ...validFiles.map((f) => URL.createObjectURL(f))]);
+    const newPreviews = files.map((file) => URL.createObjectURL(file));
+    setImagePreviews((prev) => [...prev, ...newPreviews]);
   };
 
   const removeNewImage = (index) => {
@@ -130,38 +129,33 @@ const ProductForm = () => {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const removeExistingImage = async (imageUrl) => {
-    if (!isEditMode) return;
+  const removeExistingImage = async (filename) => {
+    if (!window.confirm('Delete this image permanently?')) return;
     try {
-      // Extract filename from URL
-      const filename = imageUrl.split('/').pop();
       const response = await adminProductAPI.deleteImage(id, filename);
       if (response.data.success) {
-        setExistingImages((prev) => prev.filter((img) => img.url !== imageUrl));
-      } else {
-        alert('Failed to delete image');
+        setExistingImages(response.data.images);
       }
     } catch (err) {
       console.error('removeExistingImage error:', err);
-      alert('Failed to delete image');
+      setError('Failed to delete image');
     }
   };
 
   const getDiscount = () => {
-    const price = parseFloat(formData.price);
-    const oldPrice = parseFloat(formData.oldPrice);
-    if (price && oldPrice && oldPrice > price) {
-      return `${Math.round(((oldPrice - price) / oldPrice) * 100)}%`;
+    const p = parseFloat(formData.price);
+    const op = parseFloat(formData.oldPrice);
+    if (p && op && op > p) {
+      return Math.round(((op - p) / op) * 100) + '%';
     }
-    return '—';
+    return '0%';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
+    setSaving(true);
 
-    // Validation
     if (!formData.name.trim()) {
       setError('Product name is required');
       setSaving(false);
@@ -182,6 +176,9 @@ const ProductForm = () => {
       const fd = new FormData();
       fd.append('name', formData.name.trim());
       fd.append('category', formData.category);
+      if (formData.seller) fd.append('seller', formData.seller);
+      fd.append('moq', formData.moq || '10 Pieces');
+      fd.append('unit', formData.unit || 'Piece');
       fd.append('description', formData.description || '');
       fd.append('price', formData.price);
       if (formData.oldPrice) fd.append('oldPrice', formData.oldPrice);
@@ -189,10 +186,9 @@ const ProductForm = () => {
       fd.append('inStock', formData.inStock);
       fd.append('isActive', formData.isActive);
       
-      // Add images
       imageFiles.forEach((file) => fd.append('images', file));
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const token = localStorage.getItem('adminToken');
       const url = isEditMode
         ? `${apiUrl}/admin/products/${id}`
@@ -219,12 +215,11 @@ const ProductForm = () => {
     }
   };
 
-  // Cleanup object URLs
   useEffect(() => {
     return () => {
-      imagePreviews.forEach(preview => URL.revokeObjectURL(preview));
+      imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
     };
-  }, [imagePreviews]);
+  }, []);
 
   if (loading) {
     return (
@@ -244,7 +239,7 @@ const ProductForm = () => {
         <div className="form-header">
           <div>
             <h1>{isEditMode ? 'Edit Product' : 'Add New Product'}</h1>
-            <p>Fill in the product information below</p>
+            <p>Fill in product and verified supplier details below</p>
           </div>
           <button className="btn-secondary-a" onClick={() => navigate('/admin/products')}>
             <i className="fas fa-times"></i> Cancel
@@ -276,7 +271,7 @@ const ProductForm = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="e.g., product name"
+                placeholder="e.g., Cotton Printed Casual Shirt"
                 required
               />
             </div>
@@ -296,6 +291,46 @@ const ProductForm = () => {
                   ))}
                 </select>
               </div>
+
+              <div className="form-group">
+                <label>Assigned Supplier / Manufacturer</label>
+                <select 
+                  name="seller" 
+                  value={formData.seller} 
+                  onChange={handleChange}
+                >
+                  <option value="">Select a Supplier</option>
+                  {sellers.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name} ({s.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Minimum Order Quantity (MOQ)</label>
+                <input
+                  type="text"
+                  name="moq"
+                  value={formData.moq}
+                  onChange={handleChange}
+                  placeholder="e.g., 20 Pieces"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Unit</label>
+                <input
+                  type="text"
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleChange}
+                  placeholder="e.g., Piece, Kg, Packet"
+                />
+              </div>
             </div>
 
             <div className="form-group full-width">
@@ -304,7 +339,7 @@ const ProductForm = () => {
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Product description..."
+                placeholder="Detailed specifications, material, bulk shipping options..."
                 rows="4"
               />
             </div>
@@ -312,16 +347,16 @@ const ProductForm = () => {
 
           {/* Pricing */}
           <div className="form-section">
-            <h2>Pricing</h2>
+            <h2>Wholesale Pricing</h2>
             <div className="form-row">
               <div className="form-group">
-                <label>Price (₹) *</label>
+                <label>Approx Price (₹) *</label>
                 <input
                   type="number"
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
-                  placeholder="e.g., 50"
+                  placeholder="e.g., 350"
                   required
                   min="0"
                   step="0.01"
@@ -329,13 +364,13 @@ const ProductForm = () => {
               </div>
 
               <div className="form-group">
-                <label>Old Price (₹)</label>
+                <label>Old / MRP Price (₹)</label>
                 <input
                   type="number"
                   name="oldPrice"
                   value={formData.oldPrice}
                   onChange={handleChange}
-                  placeholder="e.g., 80"
+                  placeholder="e.g., 500"
                   min="0"
                   step="0.01"
                 />
@@ -354,166 +389,68 @@ const ProductForm = () => {
             </div>
           </div>
 
-          {/* Stock */}
-          <div className="form-section">
-            <h2>Stock</h2>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Stock Quantity *</label>
-                <input
-                  type="number"
-                  name="stockQuantity"
-                  value={formData.stockQuantity}
-                  onChange={handleChange}
-                  placeholder="100"
-                  required
-                  min="0"
-                  step="1"
-                />
-              </div>
-
-              <div className="form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: '28px' }}>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="inStock"
-                    checked={formData.inStock}
-                    onChange={handleChange}
-                  />
-                  <span>In Stock</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
           {/* Images */}
           <div className="form-section">
             <h2>Product Images</h2>
-
-            <div style={{
-              background: '#e3f2fd',
-              border: '1px solid #2196f3',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              marginBottom: '20px',
-            }}>
-              <i className="fas fa-info-circle" style={{ color: '#2196f3' }}></i>
-              <strong style={{ marginLeft: '8px' }}>Image Requirements:</strong>
-              <span style={{ marginLeft: '8px', color: '#555', fontSize: '14px' }}>
-                Max {MAX_IMAGES} images · First image = thumbnail · Max 5MB each (JPG, PNG, WEBP)
-                · Current: {existingImages.length + imageFiles.length}/{MAX_IMAGES}
-              </span>
-            </div>
-
-            <div className="image-upload-container">
-              {(existingImages.length + imageFiles.length) < MAX_IMAGES && (
-                <div className="upload-area">
-                  <input
-                    type="file"
-                    id="imageUpload"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    style={{ display: 'none' }}
-                  />
-                  <label htmlFor="imageUpload" className="upload-label">
-                    <i className="fas fa-cloud-upload-alt"></i>
-                    <p>Click to upload images</p>
-                    <small>
-                      {MAX_IMAGES - existingImages.length - imageFiles.length} more image(s) allowed
-                    </small>
-                  </label>
-                </div>
-              )}
-
-              {/* Existing images */}
-              {existingImages.length > 0 && (
-                <div>
-                  <h3 style={{ margin: '20px 0 12px' }}>Current Images ({existingImages.length}/{MAX_IMAGES})</h3>
-                  <div className="image-preview-grid">
-                    {existingImages.map((img, index) => {
-                      const src = img.url?.startsWith('http')
-                        ? img.url
-                        : `${BASE_URL}/uploads/products/${img.url}`;
-                      return (
-                        <div key={`existing-${index}`} className="preview-item">
-                          <img src={src} alt={img.alt || `Product ${index + 1}`} />
-                          <button 
-                            type="button" 
-                            className="remove-image-btn" 
-                            onClick={() => removeExistingImage(img.url)}
-                            title="Remove image"
-                          >
-                            <i className="fas fa-times"></i>
-                          </button>
-                          {index === 0 && (
-                            <span className="primary-badge">
-                              <i className="fas fa-star"></i> Thumbnail
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* New images */}
-              {imagePreviews.length > 0 && (
-                <div>
-                  <h3 style={{ margin: '20px 0 12px' }}>New Images to Upload ({imagePreviews.length})</h3>
-                  <div className="image-preview-grid">
-                    {imagePreviews.map((preview, index) => (
-                      <div key={`new-${index}`} className="preview-item">
-                        <img src={preview} alt={`New ${index + 1}`} />
-                        <button 
-                          type="button" 
-                          className="remove-image-btn" 
-                          onClick={() => removeNewImage(index)}
-                          title="Remove image"
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                        {existingImages.length === 0 && index === 0 && (
-                          <span className="primary-badge">
-                            <i className="fas fa-star"></i> Thumbnail
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Status */}
-          <div className="form-section">
-            <h2>Status</h2>
-            <div className="form-row checkbox-row">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                />
-                <span>Active (visible to customers)</span>
+            <div className="image-upload-area">
+              <input
+                type="file"
+                id="images"
+                accept="image/*"
+                multiple
+                onChange={handleImageChange}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="images" className="upload-box" style={{ cursor: 'pointer' }}>
+                <i className="fas fa-cloud-upload-alt fa-2x"></i>
+                <p>Click to upload images (max {MAX_IMAGES})</p>
               </label>
+
+              <div className="image-previews-grid" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                {existingImages.map((img) => (
+                  <div key={img.url} className="preview-item" style={{ position: 'relative' }}>
+                    <img
+                      src={`${BASE_URL}/uploads/products/${img.url}`}
+                      alt="Product"
+                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(img.url)}
+                      style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', border: 'none' }}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="preview-item" style={{ position: 'relative' }}>
+                    <img
+                      src={preview}
+                      alt="Preview"
+                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeNewImage(index)}
+                      style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', border: 'none' }}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="form-actions">
-            <button type="button" className="btn-secondary-a" onClick={() => navigate('/admin/products')}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary-a" disabled={saving}>
-              {saving ? (
-                <><i className="fas fa-spinner fa-spin"></i> Saving...</>
-              ) : (
-                <><i className="fas fa-save"></i> {isEditMode ? 'Update Product' : 'Create Product'}</>
-              )}
+          <div className="form-actions" style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn-primary-a"
+              style={{ padding: '12px 24px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}
+            >
+              {saving ? 'Saving...' : isEditMode ? 'Update Product' : 'Create Product'}
             </button>
           </div>
         </form>
