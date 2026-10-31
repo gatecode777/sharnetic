@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
+import BulkImportModal from '../../components/admin/BulkImportModal';
 import { adminProductAPI } from '../../services/api';
+import { downloadCSV, arrayToCSV, PRODUCT_TEMPLATE_CSV } from '../../utils/csvHelper';
 import '../../styles/admin/AdminProducts.css';
 
 const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -17,6 +19,8 @@ const AdminProducts = () => {
   const [totalProducts, setTotalProducts] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [error, setError] = useState('');
   const [categories, setCategories] = useState([]);
@@ -86,6 +90,28 @@ const AdminProducts = () => {
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete product');
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      const res = await adminProductAPI.exportAll({
+        category: filterCategory,
+        status: filterStatus,
+        search: searchTerm,
+      });
+      if (res.data.success && res.data.products?.length > 0) {
+        const csv = arrayToCSV(res.data.products);
+        downloadCSV(csv, `products_catalog_${new Date().toISOString().split('T')[0]}.csv`);
+      } else {
+        alert('No products found to export.');
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      alert(err.response?.data?.message || 'Failed to export products.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -204,14 +230,45 @@ const AdminProducts = () => {
     <AdminLayout>
       <div className="admin-products">
         {/* Header */}
-        <div className="page-header-u">
+        <div className="page-header-u flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1>Products Management</h1>
             <p>Manage your product catalog ({totalProducts} total)</p>
           </div>
-          <Link to="/admin/products/new" className="btn-primary-a">
-            <i className="fas fa-plus"></i> Add New Product
-          </Link>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={exporting}
+              className="btn-secondary-a flex items-center space-x-1.5"
+              title="Export all products to CSV"
+            >
+              {exporting ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-file-export text-blue-600"></i>
+                  <span>Export CSV</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="btn-secondary-a flex items-center space-x-1.5"
+              title="Bulk import products from CSV or JSON"
+            >
+              <i className="fas fa-file-import text-green-600"></i>
+              <span>Bulk Import</span>
+            </button>
+            <Link to="/admin/products/new" className="btn-primary-a flex items-center space-x-1.5">
+              <i className="fas fa-plus"></i>
+              <span>Add New Product</span>
+            </Link>
+          </div>
         </div>
 
         {error && (
@@ -597,6 +654,18 @@ const AdminProducts = () => {
           </div>
         </div>
       )}
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        title="Bulk Import Products"
+        templateCsv={PRODUCT_TEMPLATE_CSV}
+        templateFilename="products_import_template.csv"
+        onImport={(items) => adminProductAPI.bulkImport(items)}
+        onSuccess={() => {
+          fetchProducts();
+        }}
+      />
     </AdminLayout>
   );
 };

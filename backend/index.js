@@ -23,8 +23,13 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman) or localhost development origins
-    if (!origin || allowedOrigins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    // Allow requests with no origin, allowedOrigins, localhost, or Vercel deployments
+    if (
+      !origin || 
+      allowedOrigins.includes(origin) || 
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+      /\.vercel\.app$/.test(origin)
+    ) {
       return callback(null, true);
     }
     return callback(new Error('Blocked by CORS'));

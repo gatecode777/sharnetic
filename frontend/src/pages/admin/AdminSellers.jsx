@@ -1,7 +1,9 @@
 // frontend/src/pages/admin/AdminSellers.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import BulkImportModal from '../../components/admin/BulkImportModal';
 import { sellerAPI, adminCategoryAPI } from '../../services/api';
+import { downloadCSV, arrayToCSV, SELLER_TEMPLATE_CSV } from '../../utils/csvHelper';
 
 const AdminSellers = () => {
   const [sellers, setSellers] = useState([]);
@@ -9,6 +11,8 @@ const AdminSellers = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [editingSeller, setEditingSeller] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -135,6 +139,24 @@ const AdminSellers = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      const res = await sellerAPI.exportAll();
+      if (res.data.success && res.data.sellers?.length > 0) {
+        const csv = arrayToCSV(res.data.sellers);
+        downloadCSV(csv, `suppliers_directory_${new Date().toISOString().split('T')[0]}.csv`);
+      } else {
+        alert('No suppliers found to export.');
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      alert(err.response?.data?.message || 'Failed to export suppliers.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="p-6">
@@ -145,13 +167,44 @@ const AdminSellers = () => {
               Assign main categories to sellers, verify credentials, and manage supplier profiles
             </p>
           </div>
-          <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow flex items-center space-x-2"
-          >
-            <i className="fas fa-plus"></i>
-            <span>Add New Supplier</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={exporting}
+              className="px-4 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold rounded-xl text-sm shadow-sm flex items-center space-x-1.5 transition"
+              title="Export all suppliers to CSV"
+            >
+              {exporting ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-file-export text-blue-600"></i>
+                  <span>Export CSV</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="px-4 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold rounded-xl text-sm shadow-sm flex items-center space-x-1.5 transition"
+              title="Bulk import suppliers from CSV or JSON"
+            >
+              <i className="fas fa-file-import text-green-600"></i>
+              <span>Bulk Import</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenAdd}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow flex items-center space-x-2 transition"
+            >
+              <i className="fas fa-plus"></i>
+              <span>Add New Supplier</span>
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -374,6 +427,18 @@ const AdminSellers = () => {
             </div>
           </div>
         )}
+        {/* Bulk Import Modal */}
+        <BulkImportModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          title="Bulk Import Suppliers"
+          templateCsv={SELLER_TEMPLATE_CSV}
+          templateFilename="suppliers_import_template.csv"
+          onImport={(items) => sellerAPI.bulkImport(items)}
+          onSuccess={() => {
+            fetchSellers();
+          }}
+        />
       </div>
     </AdminLayout>
   );

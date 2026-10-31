@@ -30,9 +30,12 @@ const ProductForm = () => {
     isActive: true,
   });
 
+  const [imageUrls, setImageUrls] = useState([]);
+  const [urlInput, setUrlInput] = useState('');
+  const [bulkUrlInput, setBulkUrlInput] = useState('');
+  const [showBulkUrlModal, setShowBulkUrlModal] = useState(false);
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
-  const [existingImages, setExistingImages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [sellers, setSellers] = useState([]);
 
@@ -87,7 +90,8 @@ const ProductForm = () => {
           inStock: p.stock?.inStock ?? true,
           isActive: p.isActive ?? true,
         });
-        setExistingImages(p.images || []);
+        const existingUrls = (p.images || []).map((img) => img.url).filter(Boolean);
+        setImageUrls(existingUrls);
       } else {
         setError('Failed to load product');
       }
@@ -107,9 +111,65 @@ const ProductForm = () => {
     }));
   };
 
+  const handleAddImageUrl = (e) => {
+    if (e) e.preventDefault();
+    const url = urlInput.trim();
+    if (!url) return;
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      setError('Please enter a valid image URL starting with http:// or https://');
+      return;
+    }
+
+    if (imageUrls.length + imageFiles.length >= MAX_IMAGES) {
+      setError(`Maximum ${MAX_IMAGES} images allowed`);
+      return;
+    }
+
+    if (imageUrls.includes(url)) {
+      setError('This image URL is already in the list');
+      return;
+    }
+
+    setImageUrls((prev) => [...prev, url]);
+    setUrlInput('');
+    setError('');
+  };
+
+  const handleAddBulkUrls = (e) => {
+    if (e) e.preventDefault();
+    if (!bulkUrlInput.trim()) return;
+
+    const urls = bulkUrlInput
+      .split(/[\n,;]+/)
+      .map((u) => u.trim())
+      .filter((u) => u.startsWith('http://') || u.startsWith('https://'));
+
+    if (urls.length === 0) {
+      setError('No valid http/https URLs found.');
+      return;
+    }
+
+    const availableSlots = MAX_IMAGES - (imageUrls.length + imageFiles.length);
+    if (availableSlots <= 0) {
+      setError(`Maximum ${MAX_IMAGES} images allowed.`);
+      return;
+    }
+
+    const toAdd = urls.slice(0, availableSlots).filter((u) => !imageUrls.includes(u));
+    setImageUrls((prev) => [...prev, ...toAdd]);
+    setBulkUrlInput('');
+    setShowBulkUrlModal(false);
+    setError('');
+  };
+
+  const removeImageUrl = (index) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    const totalImages = existingImages.length + imageFiles.length + files.length;
+    const totalImages = imageUrls.length + imageFiles.length + files.length;
     
     if (totalImages > MAX_IMAGES) {
       setError(`Maximum ${MAX_IMAGES} images allowed`);
@@ -127,19 +187,6 @@ const ProductForm = () => {
     URL.revokeObjectURL(imagePreviews[index]);
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const removeExistingImage = async (filename) => {
-    if (!window.confirm('Delete this image permanently?')) return;
-    try {
-      const response = await adminProductAPI.deleteImage(id, filename);
-      if (response.data.success) {
-        setExistingImages(response.data.images);
-      }
-    } catch (err) {
-      console.error('removeExistingImage error:', err);
-      setError('Failed to delete image');
-    }
   };
 
   const getDiscount = () => {
@@ -186,6 +233,9 @@ const ProductForm = () => {
       fd.append('inStock', formData.inStock);
       fd.append('isActive', formData.isActive);
       
+      // Pass all image URLs to save in database
+      fd.append('imageUrls', JSON.stringify(imageUrls));
+
       imageFiles.forEach((file) => fd.append('images', file));
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -391,56 +441,313 @@ const ProductForm = () => {
 
           {/* Images */}
           <div className="form-section">
-            <h2>Product Images</h2>
-            <div className="image-upload-area">
-              <input
-                type="file"
-                id="images"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                style={{ display: 'none' }}
-              />
-              <label htmlFor="images" className="upload-box" style={{ cursor: 'pointer' }}>
-                <i className="fas fa-cloud-upload-alt fa-2x"></i>
-                <p>Click to upload images (max {MAX_IMAGES})</p>
-              </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h2>Product Images ({imageUrls.length + imageFiles.length}/{MAX_IMAGES})</h2>
+              <button
+                type="button"
+                onClick={() => setShowBulkUrlModal(!showBulkUrlModal)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#2563eb',
+                  fontWeight: '600',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <i className="fas fa-layer-group"></i>
+                {showBulkUrlModal ? 'Hide Bulk Paste' : 'Paste Multiple URLs'}
+              </button>
+            </div>
 
-              <div className="image-previews-grid" style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                {existingImages.map((img) => (
-                  <div key={img.url} className="preview-item" style={{ position: 'relative' }}>
+            {/* Quick paste multiple URLs box */}
+            {showBulkUrlModal && (
+              <div style={{
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '10px',
+                padding: '12px',
+                marginBottom: '15px'
+              }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#1e40af', marginBottom: '6px' }}>
+                  Paste multiple image URLs (separated by new line or comma):
+                </label>
+                <textarea
+                  rows="3"
+                  value={bulkUrlInput}
+                  onChange={(e) => setBulkUrlInput(e.target.value)}
+                  placeholder="https://images.unsplash.com/photo-1...&#10;https://images.unsplash.com/photo-2..."
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: '1px solid #93c5fd',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddBulkUrls}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px 14px',
+                    background: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <i className="fas fa-plus mr-1"></i> Add URLs
+                </button>
+              </div>
+            )}
+
+            {/* Paste Single Image URL Input */}
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#374151', marginBottom: '6px' }}>
+                Paste Image URL (Web link, CDN, or Cloud URL)
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="url"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddImageUrl();
+                    }
+                  }}
+                  placeholder="Paste image link here (e.g. https://example.com/product.jpg)..."
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    border: '1.5px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  disabled={imageUrls.length + imageFiles.length >= MAX_IMAGES}
+                  style={{
+                    padding: '10px 18px',
+                    background: imageUrls.length + imageFiles.length >= MAX_IMAGES ? '#9ca3af' : '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    fontSize: '13px',
+                    cursor: imageUrls.length + imageFiles.length >= MAX_IMAGES ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <i className="fas fa-plus"></i>
+                  <span>Add URL</span>
+                </button>
+              </div>
+              <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                Paste any online image URL and click "Add URL". Image is saved directly into the database.
+              </p>
+            </div>
+
+            {/* Image Previews Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+              gap: '12px',
+              marginTop: '12px'
+            }}>
+              {imageUrls.map((url, index) => (
+                <div
+                  key={index}
+                  style={{
+                    border: '1.5px solid #e5e7eb',
+                    borderRadius: '10px',
+                    padding: '6px',
+                    background: '#ffffff',
+                    position: 'relative',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <div style={{ height: '110px', width: '100%', borderRadius: '6px', overflow: 'hidden', position: 'relative', background: '#f3f4f6' }}>
                     <img
-                      src={`${BASE_URL}/uploads/products/${img.url}`}
-                      alt="Product"
-                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                      src={url.startsWith('http') ? url : `${BASE_URL}/uploads/products/${url}`}
+                      alt={`Product ${index + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/default-product.png';
+                      }}
                     />
+                    {index === 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '4px',
+                        left: '4px',
+                        background: '#2563eb',
+                        color: 'white',
+                        fontSize: '9px',
+                        fontWeight: 'bold',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        Main
+                      </span>
+                    )}
                     <button
                       type="button"
-                      onClick={() => removeExistingImage(img.url)}
-                      style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', border: 'none' }}
+                      onClick={() => removeImageUrl(index)}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: '#ef4444',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '22px',
+                        height: '22px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                      }}
+                      title="Remove image"
                     >
                       &times;
                     </button>
                   </div>
-                ))}
-                {imagePreviews.map((preview, index) => (
-                  <div key={index} className="preview-item" style={{ position: 'relative' }}>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: '#6b7280',
+                      display: 'block',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      marginTop: '4px',
+                      padding: '0 2px'
+                    }}
+                    title={url}
+                  >
+                    {url}
+                  </span>
+                </div>
+              ))}
+
+              {/* Local File Previews */}
+              {imagePreviews.map((preview, index) => (
+                <div
+                  key={`file-${index}`}
+                  style={{
+                    border: '1.5px solid #e5e7eb',
+                    borderRadius: '10px',
+                    padding: '6px',
+                    background: '#ffffff',
+                    position: 'relative',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <div style={{ height: '110px', width: '100%', borderRadius: '6px', overflow: 'hidden', position: 'relative', background: '#f3f4f6' }}>
                     <img
                       src={preview}
-                      alt="Preview"
-                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                      alt="Uploaded File"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
+                    <span style={{
+                      position: 'absolute',
+                      top: '4px',
+                      left: '4px',
+                      background: '#9333ea',
+                      color: 'white',
+                      fontSize: '9px',
+                      fontWeight: 'bold',
+                      padding: '2px 6px',
+                      borderRadius: '4px'
+                    }}>
+                      Local File
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeNewImage(index)}
-                      style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', border: 'none' }}
+                      style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: '#ef4444',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '22px',
+                        height: '22px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
                     >
                       &times;
                     </button>
                   </div>
-                ))}
-              </div>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: '#6b7280',
+                      display: 'block',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      marginTop: '4px',
+                      padding: '0 2px'
+                    }}
+                  >
+                    {imageFiles[index]?.name}
+                  </span>
+                </div>
+              ))}
             </div>
+
+            {/* Optional Local File Upload */}
+            {imageUrls.length + imageFiles.length < MAX_IMAGES && (
+              <div style={{
+                marginTop: '15px',
+                paddingTop: '12px',
+                borderTop: '1px solid #f3f4f6',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '12px',
+                color: '#6b7280'
+              }}>
+                <span>Need to upload from local machine instead?</span>
+                <label style={{ color: '#2563eb', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}>
+                  <i className="fas fa-upload mr-1"></i> Browse Local File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageChange}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="form-actions" style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>

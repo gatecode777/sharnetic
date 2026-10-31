@@ -97,6 +97,8 @@ export const sellerAPI = {
   create: (data) => api.post('/sellers', data),
   update: (id, data) => api.put(`/sellers/${id}`, data),
   delete: (id) => api.delete(`/sellers/${id}`),
+  exportAll: () => api.get('/sellers/export'),
+  bulkImport: (items) => api.post('/sellers/bulk-import', { items }),
 };
 
 // ==================== ENQUIRIES ====================
@@ -135,6 +137,8 @@ export const adminProductAPI = {
   deleteImage: (id, filename) => api.delete(`/admin/products/${id}/images/${filename}`),
   toggleActive: (id) => api.put(`/admin/products/${id}/toggle-active`),
   toggleInStock: (id) => api.put(`/admin/products/${id}/toggle-instock`),
+  exportAll: (params) => api.get('/admin/products/export', { params }),
+  bulkImport: (items) => api.post('/admin/products/bulk-import', { items }),
 };
 
 // ==================== DASHBOARD ====================

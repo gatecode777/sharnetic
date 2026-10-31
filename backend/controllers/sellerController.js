@@ -1,6 +1,7 @@
 // backend/controllers/sellerController.js
 const Seller = require('../models/Seller');
 const Product = require('../models/Product');
+const Category = require('../models/Category');
 const slugify = require('slugify');
 
 // @desc    Get all sellers (with optional filters)
@@ -233,6 +234,167 @@ exports.deleteSeller = async (req, res) => {
   } catch (error) {
     console.error('deleteSeller error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// ==================== EXPORT SELLERS ====================
+exports.exportSellers = async (req, res) => {
+  try {
+    const sellers = await Seller.find()
+      .populate('mainCategory', 'name')
+      .sort({ createdAt: -1 });
+
+    const formatted = sellers.map((s) => ({
+      name: s.name || '',
+      mainCategory: s.mainCategory?.name || '',
+      contactPerson: s.contactPerson || '',
+      email: s.email || '',
+      phone: s.phone || '',
+      city: s.city || '',
+      state: s.state || '',
+      address: s.address || '',
+      businessType: s.businessType || 'Manufacturer & Wholesaler',
+      yearEstablished: s.yearEstablished || 2015,
+      gstin: s.gstin || '',
+      rating: s.rating || 4.8,
+      isVerified: s.isVerified !== false ? 'Yes' : 'No',
+      trustSeal: s.trustSeal !== false ? 'Yes' : 'No',
+      isActive: s.isActive !== false ? 'Active' : 'Inactive',
+      description: s.description || '',
+    }));
+
+    res.json({
+      success: true,
+      count: formatted.length,
+      sellers: formatted,
+    });
+  } catch (error) {
+    console.error('exportSellers error:', error);
+    res.status(500).json({ success: false, message: 'Export failed', error: error.message });
+  }
+};
+
+// ==================== BULK IMPORT SELLERS ====================
+exports.bulkImportSellers = async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'No items provided for import' });
+    }
+
+    const categories = await Category.find();
+    const catMap = new Map();
+    categories.forEach((c) => {
+      catMap.set(c.name.toLowerCase().trim(), c._id);
+      catMap.set(c._id.toString(), c._id);
+    });
+
+    const defaultCatId = categories[0]?._id;
+    let createdCount = 0;
+    let updatedCount = 0;
+    const errors = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const rowNum = i + 1;
+
+      if (!item.name || !item.name.trim()) {
+        errors.push({ row: rowNum, error: 'Supplier name is required' });
+        continue;
+      }
+
+      const name = item.name.trim();
+
+      // Resolve mainCategory
+      let mainCategoryId = null;
+      const catKey = (item.mainCategory || item.category || '').toLowerCase().trim();
+      if (catKey && catMap.has(catKey)) {
+        mainCategoryId = catMap.get(catKey);
+      } else if (catKey) {
+        try {
+          const newSlug = slugify(item.mainCategory || item.category, { lower: true, strict: true }) || `cat-${Date.now()}`;
+          const newCat = await Category.create({
+            name: (item.mainCategory || item.category).trim(),
+            slug: newSlug,
+          });
+          mainCategoryId = newCat._id;
+          catMap.set(catKey, newCat._id);
+        } catch (e) {
+          mainCategoryId = defaultCatId;
+        }
+      } else {
+        mainCategoryId = defaultCatId;
+      }
+
+      if (!mainCategoryId) {
+        errors.push({ row: rowNum, error: 'Could not assign a main category' });
+        continue;
+      }
+
+      const existingSeller = await Seller.findOne({ name });
+
+      if (existingSeller) {
+        if (mainCategoryId) existingSeller.mainCategory = mainCategoryId;
+        if (item.contactPerson !== undefined) existingSeller.contactPerson = item.contactPerson.trim();
+        if (item.email !== undefined) existingSeller.email = item.email.trim();
+        if (item.phone !== undefined) existingSeller.phone = item.phone.trim();
+        if (item.city !== undefined) existingSeller.city = item.city.trim();
+        if (item.state !== undefined) existingSeller.state = item.state.trim();
+        if (item.address !== undefined) existingSeller.address = item.address.trim();
+        if (item.businessType !== undefined) existingSeller.businessType = item.businessType.trim();
+        if (item.yearEstablished) existingSeller.yearEstablished = parseInt(item.yearEstablished) || 2015;
+        if (item.gstin !== undefined) existingSeller.gstin = item.gstin.trim();
+        if (item.rating) existingSeller.rating = parseFloat(item.rating) || 4.8;
+        if (item.isVerified !== undefined) existingSeller.isVerified = String(item.isVerified).toLowerCase() !== 'no' && String(item.isVerified).toLowerCase() !== 'false';
+        if (item.trustSeal !== undefined) existingSeller.trustSeal = String(item.trustSeal).toLowerCase() !== 'no' && String(item.trustSeal).toLowerCase() !== 'false';
+        if (item.isActive !== undefined) existingSeller.isActive = String(item.isActive).toLowerCase() !== 'inactive' && String(item.isActive).toLowerCase() !== 'false';
+        if (item.description !== undefined) existingSeller.description = item.description.trim();
+
+        await existingSeller.save();
+        updatedCount++;
+      } else {
+        let baseSlug = slugify(name, { lower: true, strict: true }) || 'supplier';
+        let slug = baseSlug;
+        const slugExists = await Seller.findOne({ slug });
+        if (slugExists) {
+          slug = `${baseSlug}-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 100)}`;
+        }
+
+        await Seller.create({
+          name,
+          slug,
+          mainCategory: mainCategoryId,
+          categories: [mainCategoryId],
+          contactPerson: item.contactPerson?.trim() || '',
+          email: item.email?.trim() || '',
+          phone: item.phone?.trim() || '',
+          city: item.city?.trim() || 'Jaipur',
+          state: item.state?.trim() || 'Rajasthan',
+          address: item.address?.trim() || '',
+          businessType: item.businessType?.trim() || 'Manufacturer & Wholesaler',
+          yearEstablished: parseInt(item.yearEstablished) || 2015,
+          gstin: item.gstin?.trim() || '',
+          rating: parseFloat(item.rating) || 4.8,
+          isVerified: String(item.isVerified).toLowerCase() !== 'no' && String(item.isVerified).toLowerCase() !== 'false',
+          trustSeal: String(item.trustSeal).toLowerCase() !== 'no' && String(item.trustSeal).toLowerCase() !== 'false',
+          isActive: String(item.isActive).toLowerCase() !== 'inactive' && String(item.isActive).toLowerCase() !== 'false',
+          description: item.description?.trim() || '',
+        });
+        createdCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Bulk import completed: ${createdCount} created, ${updatedCount} updated, ${errors.length} errors.`,
+      createdCount,
+      updatedCount,
+      errorCount: errors.length,
+      errors: errors.slice(0, 50),
+    });
+  } catch (error) {
+    console.error('bulkImportSellers error:', error);
+    res.status(500).json({ success: false, message: 'Bulk import failed', error: error.message });
   }
 };
 

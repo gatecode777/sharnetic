@@ -1,4 +1,6 @@
 const Product = require("../models/Product");
+const Category = require("../models/Category");
+const Seller = require("../models/Seller");
 const slugify = require("slugify");
 const path = require("path");
 const fs = require("fs");
@@ -124,8 +126,32 @@ exports.createProduct = async (req, res) => {
       slug = `${slug}-${Date.now()}`;
     }
 
-    // Handle uploaded images
+    // Handle images (URLs from body and/or uploaded files)
     const images = [];
+    let parsedUrls = [];
+    if (req.body.imageUrls) {
+      try {
+        parsedUrls = typeof req.body.imageUrls === 'string'
+          ? (req.body.imageUrls.startsWith('[') ? JSON.parse(req.body.imageUrls) : req.body.imageUrls.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean))
+          : req.body.imageUrls;
+      } catch (e) {
+        parsedUrls = String(req.body.imageUrls).split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+      }
+    } else if (req.body.images && typeof req.body.images === 'string') {
+      try {
+        parsedUrls = req.body.images.startsWith('[') ? JSON.parse(req.body.images) : req.body.images.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+      } catch (e) {
+        parsedUrls = [req.body.images.trim()];
+      }
+    }
+
+    if (Array.isArray(parsedUrls)) {
+      parsedUrls.forEach((u) => {
+        const urlStr = typeof u === 'string' ? u : u?.url;
+        if (urlStr && urlStr.trim()) images.push({ url: urlStr.trim(), alt: name });
+      });
+    }
+
     if (req.files && req.files.length > 0) {
       req.files.forEach((file) => {
         images.push({ 
@@ -240,17 +266,39 @@ exports.updateProduct = async (req, res) => {
       product.isActive = isActive === "false" || isActive === false ? false : true;
     }
 
-    // Handle images
+    // Handle image URLs (passed directly or in JSON)
+    if (req.body.imageUrls !== undefined || req.body.images !== undefined) {
+      const incoming = req.body.imageUrls !== undefined ? req.body.imageUrls : req.body.images;
+      let parsed = [];
+      try {
+        parsed = typeof incoming === 'string'
+          ? (incoming.startsWith('[') ? JSON.parse(incoming) : incoming.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean))
+          : incoming;
+      } catch (e) {
+        parsed = String(incoming).split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+      }
+
+      if (Array.isArray(parsed)) {
+        product.images = parsed.map(item => {
+          const urlStr = typeof item === 'string' ? item : item?.url;
+          return { url: urlStr?.trim(), alt: product.name };
+        }).filter(img => img.url);
+      }
+    }
+
+    // Handle uploaded file images
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map((file) => ({ 
         url: file.filename, 
         alt: product.name 
       }));
       
-      if (keepExistingImages === "true" || keepExistingImages === true) {
-        product.images = [...product.images, ...newImages];
+      if (keepExistingImages === "true" || keepExistingImages === true || req.body.imageUrls !== undefined) {
+        product.images = [...(product.images || []), ...newImages];
       } else {
-        product.images.forEach(img => deleteFile(img.url));
+        product.images.forEach(img => {
+          if (!img.url?.startsWith('http')) deleteFile(img.url);
+        });
         product.images = newImages;
       }
     }
@@ -287,7 +335,7 @@ exports.deleteProduct = async (req, res) => {
     // Delete all product images from disk
     if (product.images && product.images.length > 0) {
       product.images.forEach((img) => {
-        if (img.url) deleteFile(img.url);
+        if (img.url && !img.url.startsWith('http')) deleteFile(img.url);
       });
     }
 
@@ -317,7 +365,9 @@ exports.deleteProductImage = async (req, res) => {
     product.images = product.images.filter((img) => img.url !== filename);
     await product.save();
 
-    deleteFile(filename);
+    if (!filename.startsWith('http')) {
+      deleteFile(filename);
+    }
 
     res.json({ 
       success: true, 
@@ -396,5 +446,201 @@ exports.getStats = async (req, res) => {
   } catch (error) {
     console.error("getStats error:", error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// ==================== EXPORT PRODUCTS ====================
+exports.exportProducts = async (req, res) => {
+  try {
+    const { category, seller, status, search } = req.query;
+    const query = {};
+
+    if (search && search.trim()) {
+      query.name = { $regex: search.trim(), $options: "i" };
+    }
+    if (category && category !== "all") query.category = category;
+    if (seller && seller !== "all") query.seller = seller;
+    if (status === "active") query.isActive = true;
+    else if (status === "inactive") query.isActive = false;
+
+    const products = await Product.find(query)
+      .populate("category", "name")
+      .populate("seller", "name")
+      .sort({ createdAt: -1 });
+
+    const formatted = products.map((p) => ({
+      name: p.name || "",
+      category: p.category?.name || "",
+      seller: p.seller?.name || "",
+      price: p.pricing?.price || 0,
+      oldPrice: p.pricing?.oldPrice || "",
+      unit: p.unit || "Piece",
+      moq: p.moq || "10 Pieces",
+      quantity: p.stock?.quantity || 0,
+      inStock: p.stock?.inStock !== false ? "Yes" : "No",
+      isActive: p.isActive !== false ? "Active" : "Inactive",
+      description: p.description || "",
+      images: p.images?.map((img) => img.url).join(";") || "",
+    }));
+
+    res.json({
+      success: true,
+      count: formatted.length,
+      products: formatted,
+    });
+  } catch (error) {
+    console.error("exportProducts error:", error);
+    res.status(500).json({ success: false, message: "Export failed", error: error.message });
+  }
+};
+
+// ==================== BULK IMPORT PRODUCTS ====================
+exports.bulkImportProducts = async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "No items provided for import" });
+    }
+
+    // Cache categories & sellers for rapid lookup
+    const [categories, sellers] = await Promise.all([
+      Category.find(),
+      Seller.find(),
+    ]);
+
+    const catMap = new Map();
+    categories.forEach((c) => {
+      catMap.set(c.name.toLowerCase().trim(), c._id);
+      catMap.set(c._id.toString(), c._id);
+    });
+
+    const sellerMap = new Map();
+    sellers.forEach((s) => {
+      sellerMap.set(s.name.toLowerCase().trim(), s._id);
+      sellerMap.set(s._id.toString(), s._id);
+    });
+
+    const defaultSellerId = sellers[0]?._id || null;
+    let defaultCatId = categories[0]?._id || null;
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    const errors = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const rowNum = i + 1;
+
+      if (!item.name || !item.name.trim()) {
+        errors.push({ row: rowNum, error: "Product name is required" });
+        continue;
+      }
+
+      const name = item.name.trim();
+      const price = parseFloat(item.price);
+      if (isNaN(price) || price < 0) {
+        errors.push({ row: rowNum, error: `Invalid price: ${item.price}` });
+        continue;
+      }
+
+      // Resolve category
+      let categoryId = null;
+      const catKey = (item.category || item.categoryName || "").toLowerCase().trim();
+      if (catKey && catMap.has(catKey)) {
+        categoryId = catMap.get(catKey);
+      } else if (catKey) {
+        try {
+          const newSlug = slugify(item.category || item.categoryName, { lower: true, strict: true }) || `cat-${Date.now()}`;
+          const newCat = await Category.create({
+            name: (item.category || item.categoryName).trim(),
+            slug: newSlug,
+          });
+          categoryId = newCat._id;
+          catMap.set(catKey, newCat._id);
+          catMap.set(newCat._id.toString(), newCat._id);
+        } catch (e) {
+          categoryId = defaultCatId;
+        }
+      } else {
+        categoryId = defaultCatId;
+      }
+
+      // Resolve seller
+      let sellerId = null;
+      const sellerKey = (item.seller || item.sellerName || "").toLowerCase().trim();
+      if (sellerKey && sellerMap.has(sellerKey)) {
+        sellerId = sellerMap.get(sellerKey);
+      } else {
+        sellerId = defaultSellerId;
+      }
+
+      // Resolve images
+      let images = [];
+      if (Array.isArray(item.images)) {
+        images = item.images.map(img => typeof img === 'string' ? { url: img, alt: name } : img);
+      } else if (typeof item.images === 'string' && item.images.trim()) {
+        images = item.images.split(/[;,]/).map(url => ({ url: url.trim(), alt: name })).filter(img => img.url);
+      }
+
+      // Check if product with same name exists
+      const existingProduct = await Product.findOne({ name });
+
+      if (existingProduct) {
+        existingProduct.pricing.price = price;
+        if (item.oldPrice) existingProduct.pricing.oldPrice = parseFloat(item.oldPrice) || undefined;
+        if (categoryId) existingProduct.category = categoryId;
+        if (sellerId) existingProduct.seller = sellerId;
+        if (item.unit) existingProduct.unit = item.unit.trim();
+        if (item.moq) existingProduct.moq = item.moq.trim();
+        if (item.description !== undefined) existingProduct.description = item.description.trim();
+        if (item.quantity !== undefined) existingProduct.stock.quantity = parseInt(item.quantity) || 0;
+        if (item.inStock !== undefined) existingProduct.stock.inStock = String(item.inStock).toLowerCase() !== 'no' && String(item.inStock).toLowerCase() !== 'false';
+        if (item.isActive !== undefined) existingProduct.isActive = String(item.isActive).toLowerCase() !== 'inactive' && String(item.isActive).toLowerCase() !== 'false';
+        if (images.length > 0) existingProduct.images = images;
+
+        await existingProduct.save();
+        updatedCount++;
+      } else {
+        let baseSlug = slugify(name, { lower: true, strict: true }) || 'product';
+        let slug = baseSlug;
+        const slugExists = await Product.findOne({ slug });
+        if (slugExists) {
+          slug = `${baseSlug}-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 100)}`;
+        }
+
+        await Product.create({
+          name,
+          slug,
+          category: categoryId,
+          seller: sellerId,
+          pricing: {
+            price,
+            oldPrice: item.oldPrice ? parseFloat(item.oldPrice) || undefined : undefined,
+          },
+          unit: item.unit?.trim() || "Piece",
+          moq: item.moq?.trim() || "10 Pieces",
+          description: item.description?.trim() || "",
+          images,
+          stock: {
+            quantity: item.quantity ? parseInt(item.quantity) || 0 : 50,
+            inStock: String(item.inStock).toLowerCase() !== 'no' && String(item.inStock).toLowerCase() !== 'false',
+          },
+          isActive: String(item.isActive).toLowerCase() !== 'inactive' && String(item.isActive).toLowerCase() !== 'false',
+        });
+        createdCount++;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Bulk import completed: ${createdCount} created, ${updatedCount} updated, ${errors.length} errors.`,
+      createdCount,
+      updatedCount,
+      errorCount: errors.length,
+      errors: errors.slice(0, 50),
+    });
+  } catch (error) {
+    console.error("bulkImportProducts error:", error);
+    res.status(500).json({ success: false, message: "Bulk import failed", error: error.message });
   }
 };

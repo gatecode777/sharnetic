@@ -14,6 +14,8 @@ const {
   toggleActive,
   toggleInStock,
   getStats,
+  exportProducts,
+  bulkImportProducts,
 } = require("../controllers/adminProductController");
 
 const { protect } = require("../middleware/adminAuth"); // adjust to your auth middleware
@@ -45,8 +47,10 @@ const upload = multer({
 
 // ==================== ROUTES ====================
 
-// Stats (must be before /:id to avoid conflict)
+// Stats, Export & Bulk Import (must be before /:id to avoid conflict)
 router.get("/stats", protect, getStats);
+router.get("/export", protect, exportProducts);
+router.post("/bulk-import", protect, bulkImportProducts);
 
 // CRUD
 router.get("/", protect, getAllProducts);

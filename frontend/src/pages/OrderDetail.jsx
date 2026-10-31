@@ -234,7 +234,7 @@ const OrderDetails = () => {
               <div key={index} className="order-item">
                 <div className="item-image">
                   <img 
-                    src={item.image ? `${IMAGE_URL}/uploads/products/${item.image}` : '/default-product.png'} 
+                    src={item.image ? (item.image.startsWith('http') ? item.image : `${IMAGE_URL}/uploads/products/${item.image}`) : '/default-product.png'} 
                     alt={item.name}
                     onError={(e) => { e.target.src = '/default-product.png'; }}
                   />
