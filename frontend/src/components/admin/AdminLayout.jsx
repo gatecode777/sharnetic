@@ -26,7 +26,7 @@ const AdminLayout = ({ children }) => {
       <aside className="admin-sidebar">
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            {sidebarOpen && <span>Sharnetic Admin</span>}
+            {sidebarOpen && <span>Finoxis Admin</span>}
           </div>
           <button
             className="sidebar-toggle"

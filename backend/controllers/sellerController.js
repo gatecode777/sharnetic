@@ -42,15 +42,20 @@ exports.getAllSellers = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Attach product count for each seller
-    const sellersWithCounts = await Promise.all(
-      sellers.map(async (seller) => {
-        const count = await Product.countDocuments({ seller: seller._id, isActive: true });
-        const obj = seller.toObject();
-        obj.productCount = count;
-        return obj;
-      })
-    );
+    // Attach product count for each seller in a single fast aggregation
+    const sellerIds = sellers.map((s) => s._id);
+    const productCounts = await Product.aggregate([
+      { $match: { seller: { $in: sellerIds }, isActive: true } },
+      { $group: { _id: '$seller', count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map();
+    productCounts.forEach((pc) => countMap.set(pc._id.toString(), pc.count));
+
+    const sellersWithCounts = sellers.map((seller) => {
+      const obj = seller.toObject();
+      obj.productCount = countMap.get(seller._id.toString()) || 0;
+      return obj;
+    });
 
     res.json({
       success: true,

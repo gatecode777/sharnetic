@@ -93,7 +93,7 @@ const PrivacyPolicy = () => {
                 <div className="policy-section mb-8" id="introduction">
                     <div className="highlight-box bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <p className="mb-0 text-gray-700">
-                            At <strong>Sharnetic Technologies</strong>, we are committed to protecting your privacy and ensuring the security of your personal information.
+                            At <strong>Finoxis Technologies</strong>, we are committed to protecting your privacy and ensuring the security of your personal information.
                             This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services.
                         </p>
                     </div>
@@ -293,7 +293,7 @@ const PrivacyPolicy = () => {
                             <div className="flex-1">
                                 <h4 className="font-bold text-lg mb-3 text-gray-800">Contact Information</h4>
                                 <div className="space-y-2 text-gray-700">
-                                    <p><i className="fas fa-envelope mr-2 text-blue-600"></i> Email: support@sharnetic.com</p>
+                                    <p><i className="fas fa-envelope mr-2 text-blue-600"></i> Email: support@finoxis.com</p>
                                     <p><i className="fas fa-phone mr-2 text-blue-600"></i> Phone: +91 82201 53747</p>
                                     <p><i className="fas fa-map-marker-alt mr-2 text-blue-600"></i> Address: PLOT NO.-B, 404, 4TH FLOOR, MANSAROVAR PLAZA, SECTOR-07, Jaipur</p>
                                 </div>
@@ -302,7 +302,7 @@ const PrivacyPolicy = () => {
                                 <h4 className="font-bold text-lg mb-3 text-gray-800">Data Protection Officer</h4>
                                 <p className="text-gray-700">
                                     For data protection related inquiries, please contact our Data Protection Officer at:
-                                    <a href="mailto:dpo@sharnetic.com" className="text-blue-600 hover:underline block mt-1">dpo@sharnetic.com</a>
+                                    <a href="mailto:dpo@finoxis.com" className="text-blue-600 hover:underline block mt-1">dpo@finoxis.com</a>
                                 </p>
                             </div>
                         </div>

@@ -18,9 +18,11 @@ const ProductDetails = () => {
   const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
 
   const getProductImage = (prod, imageIndex = 0) => {
-    if (prod.images?.length > 0 && prod.images[imageIndex]) {
+    if (prod?.images?.length > 0 && prod.images[imageIndex]) {
       const img = prod.images[imageIndex];
-      return img.url?.startsWith('http') ? img.url : `${BASE_URL}/uploads/products/${img.url}`;
+      const url = typeof img === 'string' ? img : img?.url;
+      if (!url) return '/default-product.png';
+      return url.startsWith('http') ? url : `${BASE_URL}/uploads/products/${url}`;
     }
     return '/default-product.png';
   };

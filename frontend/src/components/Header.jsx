@@ -68,7 +68,7 @@ const MainHeader = () => {
                     <span>Hello, {user?.name?.split(' ')[0] || 'User'}</span>
                     <i className={`fas fa-chevron-${isDropdownOpen ? 'up' : 'down'} text-[10px] ml-1`}></i>
                   </button>
-                  
+
                   {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl py-2 z-50 text-gray-800 border border-gray-100" style={{ zIndex: '99' }}>
                       <Link
@@ -98,12 +98,12 @@ const MainHeader = () => {
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="container mx-auto px-6 max-w-7xl middle-header-wrapper" style={{ paddingTop: '22px', paddingBottom: '22px' }}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-8">
-            
+
             {/* Logo */}
             <Link to="/" className="flex items-center flex-shrink-0 hover:opacity-95 transition">
               <img
-                src="/sharnetic_logo.png"
-                alt="Sharnetic"
+                src="/finoxis_logo.png"
+                alt="Finoxis"
                 style={{ height: '46px', width: 'auto' }}
                 className="h-11 md:h-12 w-auto object-contain"
               />
@@ -146,8 +146,8 @@ const MainHeader = () => {
               </button>
 
               {!isLoggedIn && (
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className="btn-header-login"
                 >
                   <i className="fas fa-user-circle text-sm text-gray-500"></i>

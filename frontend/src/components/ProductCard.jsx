@@ -7,10 +7,12 @@ const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://lo
 const ProductCard = ({ product, onEnquiry }) => {
   if (!product) return null;
 
-  const imageUrl = product.images?.[0]?.url
-    ? (product.images[0].url.startsWith('http')
-        ? product.images[0].url
-        : `${BASE_URL}/uploads/products/${product.images[0].url}`)
+  const rawFirst = product.images?.[0];
+  const firstUrl = typeof rawFirst === 'string' ? rawFirst : rawFirst?.url;
+  const imageUrl = firstUrl
+    ? (firstUrl.startsWith('http')
+        ? firstUrl
+        : `${BASE_URL}/uploads/products/${firstUrl}`)
     : '/default-product.png';
 
   const seller = product.seller || {};

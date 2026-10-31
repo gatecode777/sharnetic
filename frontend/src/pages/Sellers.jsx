@@ -15,6 +15,9 @@ const SellersPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalSellers, setTotalSellers] = useState(0);
 
   // Enquiry modal
   const [enquirySeller, setEnquirySeller] = useState(null);
@@ -47,7 +50,7 @@ const SellersPage = () => {
       setLoading(true);
       setError('');
 
-      const params = { limit: 50 };
+      const params = { page, limit: 30 };
       if (selectedCategory) params.category = selectedCategory;
       if (selectedCity) params.city = selectedCity;
       if (search.trim()) params.search = search.trim();
@@ -55,6 +58,8 @@ const SellersPage = () => {
       const res = await sellerAPI.getAll(params);
       if (res.data.success) {
         setSellers(res.data.sellers || []);
+        setTotalSellers(res.data.totalSellers || 0);
+        setTotalPages(res.data.totalPages || 1);
       } else {
         setError('Failed to load sellers');
       }
@@ -64,7 +69,7 @@ const SellersPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, selectedCity, search]);
+  }, [page, selectedCategory, selectedCity, search]);
 
   useEffect(() => {
     fetchSellers();
@@ -108,7 +113,7 @@ const SellersPage = () => {
                 type="text"
                 placeholder="e.g. Apex, Vardhman..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -120,7 +125,7 @@ const SellersPage = () => {
               </label>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="">All Main Categories</option>
@@ -139,7 +144,7 @@ const SellersPage = () => {
               </label>
               <select
                 value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
+                onChange={(e) => { setSelectedCity(e.target.value); setPage(1); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="">All Indian Cities</option>
@@ -204,7 +209,7 @@ const SellersPage = () => {
                   </Link>
 
                   <p className="text-xs text-gray-600 line-clamp-2 mb-4 leading-relaxed">
-                    {seller.description || 'Verified manufacturer and bulk supplier on Sharnetic B2B Marketplace.'}
+                    {seller.description || 'Verified manufacturer and bulk supplier on Finoxis.'}
                   </p>
 
                   <div className="space-y-1.5 text-xs text-gray-600 border-t border-gray-100 pt-3">
@@ -250,6 +255,97 @@ const SellersPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8 bg-white p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-sm">
+            <span className="text-gray-600 font-semibold">
+              Showing Page <strong className="text-gray-900">{page}</strong> of <strong className="text-gray-900">{totalPages}</strong> ({totalSellers.toLocaleString()} Total Suppliers)
+            </span>
+
+            <div className="flex items-center space-x-1.5">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className={`px-3 py-1.5 rounded-lg font-bold border transition ${
+                  page <= 1
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm'
+                }`}
+              >
+                <i className="fas fa-chevron-left mr-1"></i> Prev
+              </button>
+
+              {(() => {
+                const pages = [];
+                const maxButtons = 5;
+                let start = Math.max(1, page - 2);
+                let end = Math.min(totalPages, start + maxButtons - 1);
+                if (end - start + 1 < maxButtons) {
+                  start = Math.max(1, end - maxButtons + 1);
+                }
+
+                if (start > 1) {
+                  pages.push(
+                    <button
+                      key={1}
+                      onClick={() => { setPage(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="w-8 h-8 rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                    >
+                      1
+                    </button>
+                  );
+                  if (start > 2) pages.push(<span key="dots-start" className="px-1 text-gray-400">...</span>);
+                }
+
+                for (let p = start; p <= end; p++) {
+                  pages.push(
+                    <button
+                      key={p}
+                      onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className={`w-8 h-8 rounded-lg font-bold transition ${
+                        page === p
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                }
+
+                if (end < totalPages) {
+                  if (end < totalPages - 1) pages.push(<span key="dots-end" className="px-1 text-gray-400">...</span>);
+                  pages.push(
+                    <button
+                      key={totalPages}
+                      onClick={() => { setPage(totalPages); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className="w-8 h-8 rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                    >
+                      {totalPages}
+                    </button>
+                  );
+                }
+
+                return pages;
+              })()}
+
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className={`px-3 py-1.5 rounded-lg font-bold border transition ${
+                  page >= totalPages
+                    ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm'
+                }`}
+              >
+                Next <i className="fas fa-chevron-right ml-1"></i>
+              </button>
+            </div>
           </div>
         )}
       </div>

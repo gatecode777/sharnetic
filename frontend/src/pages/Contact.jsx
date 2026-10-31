@@ -116,8 +116,8 @@ const Contact = () => {
         {
             icon: 'fas fa-envelope',
             title: 'Email Us',
-            details: ['support@sharnetic.com', 'careers@sharnetic.com'],
-            action: 'mailto:support@sharnetic.com'
+            details: ['support@finoxis.com', 'careers@finoxis.com'],
+            action: 'mailto:support@finoxis.com'
         },
         {
             icon: 'fas fa-clock',
@@ -313,7 +313,7 @@ const Contact = () => {
                         <h2>Find Us Here</h2>
                         <div className="map-wrapper">
                             <iframe
-                                title="Sharnetic Location"
+                                title="Finoxis Location"
                                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3888.032452429929!2d77.59473531482268!3d12.971598790858384!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1670c9b44e6d%3A0xf8dfc3c8517e4fe0!2sBangalore%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1698765432100!5m2!1sen!2sin"
                                 width="100%"
                                 height="400"

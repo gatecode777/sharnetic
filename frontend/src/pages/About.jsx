@@ -136,7 +136,7 @@ const About = () => {
             {/* Hero Section */}
             <div className="about-hero">
                 <div className="container-about">
-                    <h1>About SHARNETIC TECHNOLOGIES</h1>
+                    <h1>About FINOXIS TECHNOLOGIES</h1>
                     <p>Redefining online shopping experience with quality, trust, and innovation</p>
                 </div>
             </div>
@@ -184,7 +184,7 @@ const About = () => {
                         <div className="story-content" data-aos="fade-right">
                             <h2>Our Story</h2>
                             <p className="story-subtitle">From humble beginnings to your favorite online store</p>
-                            <p>SHARNETIC TECHNOLOGIES PRIVATE LIMITED was founded in 2021 with a simple vision: to make quality products accessible to everyone, everywhere. What started as a small team of passionate individuals has grown into a trusted e-commerce platform serving thousands of customers across India.</p>
+                            <p>FINOXIS TECHNOLOGIES PRIVATE LIMITED was founded in 2021 with a simple vision: to make quality products accessible to everyone, everywhere. What started as a small team of passionate individuals has grown into a trusted e-commerce platform serving thousands of customers across India.</p>
                             <p>We believe that online shopping should be simple, secure, and enjoyable. That's why we've curated a wide range of products from trusted brands and artisans, ensuring quality at every step. Our commitment to customer satisfaction drives everything we do, from product selection to fast delivery and easy returns.</p>
                             <p>Today, we're proud to be one of India's fastest-growing e-commerce platforms, but our journey is just beginning. We're constantly evolving, adding new products, and improving our services to serve you better.</p>
                             <Link to="/contact" className="story-btn">
@@ -291,7 +291,7 @@ const About = () => {
             <div className="why-choose-section">
                 <div className="container-about">
                     <div className="section-header">
-                        <h2>Why Choose SHARNETIC?</h2>
+                        <h2>Why Choose FINOXIS?</h2>
                         <p>What makes us different from the rest</p>
                     </div>
                     <div className="features-grid">
@@ -403,7 +403,7 @@ const About = () => {
                 <div className="container-about">
                     <div className="cta-content">
                         <h2>Ready to Start Shopping?</h2>
-                        <p>Join thousands of happy customers who trust SHARNETIC for their shopping needs</p>
+                        <p>Join thousands of happy customers who trust FINOXIS for their shopping needs</p>
                         <div className="cta-buttons">
                             <Link to="/shop" className="cta-btn-primary">
                                 Shop Now

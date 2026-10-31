@@ -95,7 +95,13 @@ export const parseCSV = (text) => {
 
     const obj = {};
     headers.forEach((header, idx) => {
-      obj[header] = currentLine[idx] !== undefined ? currentLine[idx] : '';
+      const val = currentLine[idx] !== undefined ? currentLine[idx] : '';
+      obj[header] = val;
+      // Also provide normalized lowercase key for resilient matching
+      const normKey = header.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
+      if (normKey && !obj[normKey]) {
+        obj[normKey] = val;
+      }
     });
     rows.push(obj);
   }
@@ -106,10 +112,11 @@ export const parseCSV = (text) => {
 /**
  * Sample CSV Templates for Admin Import
  */
-export const PRODUCT_TEMPLATE_CSV = `name,category,seller,price,oldPrice,unit,moq,quantity,inStock,isActive,description,images
-"Cotton Casual Shirt","Clothing","Apex Garments & Textiles Ltd.",499,999,"Piece","10 Pieces",150,"Yes","Active","Premium 100% breathable cotton shirts for bulk wholesale orders","https://images.unsplash.com/photo-1596755094514-f87e34085b2c"
-"Stainless Steel Hex Bolts M8","Hardware & Tools","Apex Garments & Textiles Ltd.",12,18,"Piece","500 Pieces",5000,"Yes","Active","High tensile grade 8.8 stainless steel hex bolts for industrial use",""
-"Designer Cotton Sarees Wholesale","Clothing","Apex Garments & Textiles Ltd.",850,1500,"Piece","25 Pieces",300,"Yes","Active","Handcrafted traditional printed cotton sarees direct from manufacturer",""`;
+export const PRODUCT_TEMPLATE_CSV = `product_id,name,image,price,mrp,category,sub_category,brand,size,colour
+"SRTEH2FF9KEDEFGH","Alisha Solid Women's Cycling Shorts","http://img5a.flixcart.com/image/short/u/4/a/altht-3p-21-alisha-38-original-imaeh2d5vm5zbtq.jpeg",379,999,"Clothing","Women's Clothing","Alisha","M","Black"
+"SBEEH3QGU7MFYF","FabHomeDecor Fabric Double Sofa Bed","http://img6a.flixcart.com/image/sofa-bed/j/t/y/fhd112-double-foam-fabhomedecor-leatherette.jpeg",22646,32157,"Furniture","Living Room Furniture","FabHomeDecor","Not specified","Brown"
+"SHOEH4GRSUBJGZ","AW Bellies Women Casual Shoes","http://img5a.flixcart.com/image/shoe/7/z/z/red-as-454-aw-11-original-imaeebfwsdf6jdf6.jpeg",499,999,"Footwear","Women's Footwear","AW","7","Red"
+"PSOEH3ZYDMSYAR","Sicons All Purpose Arnica Dog Shampoo","http://img5a.flixcart.com/image/pet-shampoo/r/j/5/sh-df-14-sicons-500-1100x1100-imaeh3h.jpeg",210,220,"Pet Supplies","Grooming","Sicons","500ml","Not specified"`;
 
 export const SELLER_TEMPLATE_CSV = `name,mainCategory,contactPerson,email,phone,city,state,address,businessType,yearEstablished,gstin,rating,isVerified,description
 "Jaipur Textiles & Handlooms","Clothing","Rajesh Sharma","contact@jaipurtextiles.com","+91 98290 12345","Jaipur","Rajasthan","Plot 42, Sitapura Industrial Area","Manufacturer & Exporter",2012,"08AAACJ1234F1Z5",4.8,"Yes","Leading manufacturer and bulk supplier of cotton handloom fabrics, ethnic garments, and dyed textiles."

@@ -9,9 +9,9 @@ const Footer = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                     {/* Column 1 */}
                     <div>
-                        <h4 className="text-base font-bold mb-4 text-white uppercase tracking-wider">ABOUT SHARNETIC</h4>
+                        <h4 className="text-base font-bold mb-4 text-white uppercase tracking-wider">ABOUT FINOXIS</h4>
                         <div className="footer-links flex flex-col space-y-2 text-xs">
-                            <Link to="/about" className="hover:text-white transition">About Sharnetic Network</Link>
+                            <Link to="/about" className="hover:text-white transition">About Finoxis Network</Link>
                             <Link to="/sellers" className="hover:text-white transition">Verified Supplier Network</Link>
                             <Link to="/shop" className="hover:text-white transition">Wholesale Products Directory</Link>
                             <Link to="/contact" className="hover:text-white transition">Corporate Contact</Link>
@@ -44,10 +44,10 @@ const Footer = () => {
                     <div>
                         <h4 className="text-base font-bold mb-4 text-white uppercase tracking-wider">HEADQUARTERS</h4>
                         <div className="text-gray-300 text-xs space-y-1">
-                            <p className="font-bold text-white">SHARNETIC TECHNOLOGIES PRIVATE LIMITED</p>
+                            <p className="font-bold text-white">FINOXIS TECHNOLOGIES PRIVATE LIMITED</p>
                             <p>SHOP NO. 4, NAROTTAMPURA, SANGANER</p>
                             <p>Jaipur, Rajasthan - 302026</p>
-                            <p className="mt-2 text-blue-300">Email: info@sharnetic.in</p>
+                            <p className="mt-2 text-blue-300">Email: info@finoxis.in</p>
                             <p className="text-blue-300">Phone: +91 80009 05713</p>
                         </div>
                     </div>
@@ -70,7 +70,7 @@ const Footer = () => {
                     </div>
 
                     <div className="text-center mt-8 text-gray-500 text-xs">
-                        <p>&copy; 2026 SHARNETIC TECHNOLOGIES PRIVATE LIMITED. All rights reserved.</p>
+                        <p>&copy; 2026 FINOXIS TECHNOLOGIES PRIVATE LIMITED. All rights reserved.</p>
                         <p className="mt-1">Connecting Indian Manufacturers, Exporters, and Wholesale Buyers.</p>
                     </div>
                 </div>

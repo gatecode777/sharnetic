@@ -88,13 +88,15 @@ const ProductSchema = new mongoose.Schema(
 );
 
 ProductSchema.pre("save", function (next) {
-  // Generate slug when name changes
-  if (this.isModified("name")) {
-    this.slug = this.name
+  // Only auto-generate slug if not explicitly set
+  if (!this.slug) {
+    const base = (this.name || "product")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+      .replace(/(^-|-$)/g, "") || "product";
+    this.slug = `${base}-${Math.random().toString(36).substring(2, 7)}`;
   }
+  if (typeof next === "function") next();
 });
 
 ProductSchema.index({ seller: 1 });

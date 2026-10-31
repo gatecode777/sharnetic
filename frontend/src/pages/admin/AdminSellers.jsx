@@ -14,6 +14,11 @@ const AdminSellers = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [editingSeller, setEditingSeller] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [totalSellers, setTotalSellers] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -47,18 +52,21 @@ const AdminSellers = () => {
   const fetchSellers = useCallback(async () => {
     try {
       setLoading(true);
-      const params = { limit: 50 };
+      const params = { page, limit };
       if (search.trim()) params.search = search.trim();
+      if (selectedCategory) params.category = selectedCategory;
       const res = await sellerAPI.getAll(params);
       if (res.data.success) {
         setSellers(res.data.sellers || []);
+        setTotalSellers(res.data.totalSellers || 0);
+        setTotalPages(res.data.totalPages || 1);
       }
     } catch (e) {
       console.error('Fetch sellers error:', e);
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [page, limit, search, selectedCategory]);
 
   useEffect(() => {
     fetchCategories();
@@ -162,7 +170,12 @@ const AdminSellers = () => {
       <div className="p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Manage Verified Suppliers & Sellers</h1>
+            <h1 className="text-2xl font-bold text-gray-900 flex flex-wrap items-center gap-2">
+              <span>Manage Verified Suppliers & Sellers</span>
+              <span className="text-xs bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded-full border border-blue-200">
+                {totalSellers.toLocaleString()} Total Suppliers
+              </span>
+            </h1>
             <p className="text-sm text-gray-500 mt-1">
               Assign main categories to sellers, verify credentials, and manage supplier profiles
             </p>
@@ -207,19 +220,54 @@ const AdminSellers = () => {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex items-center justify-between">
-          <div className="w-72">
-            <input
-              type="text"
-              placeholder="Search supplier name, city, contact..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        {/* Filters & Search Bar */}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            {/* Search input */}
+            <div className="w-full sm:w-72 relative">
+              <i className="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
+              <input
+                type="text"
+                placeholder="Search name, city, contact..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Category filter */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Categories ({categories.length})</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Rows per page selector */}
+            <div className="flex items-center space-x-1.5 text-xs text-gray-600 font-semibold">
+              <span>Show:</span>
+              <select
+                value={limit}
+                onChange={(e) => { setLimit(parseInt(e.target.value)); setPage(1); }}
+                className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+                <option value={250}>250 per page</option>
+                <option value={500}>500 per page</option>
+                <option value={1000}>1000 per page</option>
+              </select>
+            </div>
           </div>
-          <span className="text-xs font-semibold text-gray-500">
-            {sellers.length} Suppliers Listed
+
+          <span className="text-xs font-semibold text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+            Showing {sellers.length > 0 ? (page - 1) * limit + 1 : 0} – {Math.min(page * limit, totalSellers)} of {totalSellers.toLocaleString()} Suppliers
           </span>
         </div>
 
@@ -291,12 +339,122 @@ const AdminSellers = () => {
               </table>
             </div>
           )}
+
+          {/* Pagination Footer */}
+          {totalPages > 1 && (
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <span className="text-gray-600 font-semibold">
+                Page <strong className="text-gray-900">{page}</strong> of <strong className="text-gray-900">{totalPages}</strong> ({totalSellers.toLocaleString()} total suppliers)
+              </span>
+
+              <div className="flex items-center space-x-1.5">
+                {/* Previous */}
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className={`px-3 py-1.5 rounded-lg font-bold border transition ${
+                    page <= 1
+                      ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-white'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm'
+                  }`}
+                >
+                  <i className="fas fa-chevron-left mr-1"></i> Prev
+                </button>
+
+                {/* Page Number Pills */}
+                {(() => {
+                  const pages = [];
+                  const maxButtons = 5;
+                  let start = Math.max(1, page - 2);
+                  let end = Math.min(totalPages, start + maxButtons - 1);
+                  if (end - start + 1 < maxButtons) {
+                    start = Math.max(1, end - maxButtons + 1);
+                  }
+
+                  if (start > 1) {
+                    pages.push(
+                      <button
+                        key={1}
+                        onClick={() => setPage(1)}
+                        className="w-8 h-8 rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                      >
+                        1
+                      </button>
+                    );
+                    if (start > 2) {
+                      pages.push(<span key="dots-start" className="px-1 text-gray-400">...</span>);
+                    }
+                  }
+
+                  for (let p = start; p <= end; p++) {
+                    pages.push(
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`w-8 h-8 rounded-lg font-bold transition ${
+                          page === p
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  }
+
+                  if (end < totalPages) {
+                    if (end < totalPages - 1) {
+                      pages.push(<span key="dots-end" className="px-1 text-gray-400">...</span>);
+                    }
+                    pages.push(
+                      <button
+                        key={totalPages}
+                        onClick={() => setPage(totalPages)}
+                        className="w-8 h-8 rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                      >
+                        {totalPages}
+                      </button>
+                    );
+                  }
+
+                  return pages;
+                })()}
+
+                {/* Next */}
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className={`px-3 py-1.5 rounded-lg font-bold border transition ${
+                    page >= totalPages
+                      ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-white'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm'
+                  }`}
+                >
+                  Next <i className="fas fa-chevron-right ml-1"></i>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4"
+            style={{ overflowY: 'auto' }}
+            onClick={() => setShowModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl"
+              style={{
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                margin: 'auto 0',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex justify-between items-center border-b pb-3 mb-4">
                 <h3 className="font-bold text-gray-900 text-base">
                   {editingSeller ? 'Edit Supplier' : 'Add New Supplier'}

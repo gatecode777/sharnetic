@@ -409,7 +409,7 @@ const HomeContent = () => {
                             India's Trusted Trade Platform
                         </span>
                         <h2 className="text-2xl font-extrabold text-gray-900 mt-1">
-                            Why Source on Sharnetic?
+                            Why Source on Finoxis?
                         </h2>
                         <p className="text-sm text-gray-600 mt-1">
                             Everything you need to source directly from verified Indian factories & distributors

@@ -45,7 +45,7 @@ const TermsAndConditions = () => {
                         <i className="fas fa-file-contract"></i>
                     </div>
                     <h1 className="text-3xl font-bold mb-3">Terms & Conditions</h1>
-                    <p className="text-lg opacity-90">Please read these terms carefully before using Sharnetic Technologies</p>
+                    <p className="text-lg opacity-90">Please read these terms carefully before using Finoxis Technologies</p>
                     <div className="mt-4 text-sm">
                         <span className="bg-white/20 px-3 py-1 rounded-full">Last Updated: June 2025</span>
                     </div>
@@ -57,10 +57,10 @@ const TermsAndConditions = () => {
                     <div className="terms-section mb-8">
                         <h2 className="text-2xl font-bold text-gray-800 mb-4">Introduction</h2>
                         <p className="text-gray-700 mb-4">
-                            Welcome to Sharnetic Technologies ("we," "our," or "us"). By accessing and using our website, mobile application, or services (collectively, the "Services"), you agree to be bound by these Terms and Conditions ("Terms"). Please read them carefully.
+                            Welcome to Finoxis Technologies ("we," "our," or "us"). By accessing and using our website, mobile application, or services (collectively, the "Services"), you agree to be bound by these Terms and Conditions ("Terms"). Please read them carefully.
                         </p>
                         <p className="text-gray-700">
-                            These Terms constitute a legally binding agreement between you and Sharnetic Technologies PRIVATE LIMITED regarding your use of our Services. If you do not agree with any part of these Terms, you must not use our Services.
+                            These Terms constitute a legally binding agreement between you and Finoxis Technologies PRIVATE LIMITED regarding your use of our Services. If you do not agree with any part of these Terms, you must not use our Services.
                         </p>
                     </div>
 
@@ -187,7 +187,7 @@ const TermsAndConditions = () => {
                         </div>
                         <div className="pl-12">
                             <p className="text-gray-700 mb-4">
-                                All content on our Services, including text, graphics, logos, images, and software, is the property of Sharnetic Technologies or its content suppliers and is protected by Indian and international copyright laws.
+                                All content on our Services, including text, graphics, logos, images, and software, is the property of Finoxis Technologies or its content suppliers and is protected by Indian and international copyright laws.
                             </p>
                             <p className="text-gray-700">
                                 You may not reproduce, distribute, modify, create derivative works of, publicly display, or commercially exploit any content without our express written permission.
@@ -202,7 +202,7 @@ const TermsAndConditions = () => {
                             <h2 className="text-xl font-bold text-gray-800">Limitation of Liability</h2>
                         </div>
                         <div className="pl-12">
-                            <p className="text-gray-700 mb-4">To the maximum extent permitted by law, Sharnetic Technologies shall not be liable for:</p>
+                            <p className="text-gray-700 mb-4">To the maximum extent permitted by law, Finoxis Technologies shall not be liable for:</p>
                             <ul className="terms-list list-disc pl-5 space-y-2 text-gray-700 mb-4">
                                 <li>Any indirect, incidental, special, or consequential damages</li>
                                 <li>Loss of profits, revenue, data, or use</li>
@@ -239,7 +239,7 @@ const TermsAndConditions = () => {
                             <div>
                                 <p className="text-gray-700">
                                     <i className="fas fa-envelope text-blue-600 mr-2"></i>
-                                    <strong>Email:</strong> support@sharnetic.com
+                                    <strong>Email:</strong> support@finoxis.com
                                 </p>
                             </div>
                             <div>
@@ -282,7 +282,7 @@ const TermsAndConditions = () => {
                             <i className="fas fa-history mr-1"></i> These Terms & Conditions were last updated on June 1, 2025
                         </p>
                         <p className="text-gray-400 text-xs mt-2">
-                            © 2026 Sharnetic Technologies PRIVATE LIMITED. All rights reserved.
+                            © 2026 Finoxis Technologies PRIVATE LIMITED. All rights reserved.
                         </p>
                     </div>
                 </div>

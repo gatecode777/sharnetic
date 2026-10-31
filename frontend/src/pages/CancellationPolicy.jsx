@@ -67,7 +67,7 @@ const CancellationPolicy = () => {
                 <div className="policy-section mb-8">
                     <div className="highlight-box bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <p className="mb-0 text-gray-700">
-                            At <strong>Sharnetic Technologies</strong>, we understand that sometimes plans change. Our cancellation policy is designed to be fair and flexible for our customers while ensuring smooth operations.
+                            At <strong>Finoxis Technologies</strong>, we understand that sometimes plans change. Our cancellation policy is designed to be fair and flexible for our customers while ensuring smooth operations.
                         </p>
                     </div>
                 </div>
@@ -85,7 +85,7 @@ const CancellationPolicy = () => {
                         </div>
                         <div className="step-box flex items-start gap-4 p-3 bg-gray-50 rounded">
                             <span className="step-number w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 mt-0.5">2</span>
-                            <p className="text-gray-700">To cancel an order, please contact us at <a href="mailto:support@sharnetic.com" className="text-blue-600 underline font-medium">support@sharnetic.com</a> with your order ID.</p>
+                            <p className="text-gray-700">To cancel an order, please contact us at <a href="mailto:support@finoxis.com" className="text-blue-600 underline font-medium">support@finoxis.com</a> with your order ID.</p>
                         </div>
                         <div className="step-box flex items-start gap-4 p-3 bg-gray-50 rounded">
                             <span className="step-number w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 mt-0.5">3</span>
@@ -181,7 +181,7 @@ const CancellationPolicy = () => {
                             If you need assistance with cancellations or have any concerns, our customer support team is here to help you.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <a href="mailto:support@sharnetic.com"
+                            <a href="mailto:support@finoxis.com"
                                className="inline-flex items-center justify-center bg-blue-600 text-white px-5 py-2.5 rounded hover:bg-blue-700 transition text-sm font-medium">
                                 <i className="fas fa-envelope mr-2"></i>
                                 Email Support

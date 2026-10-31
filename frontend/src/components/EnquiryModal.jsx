@@ -88,11 +88,31 @@ const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' })
   const sellerCity = seller?.city || product?.seller?.city || 'India';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 transform transition-all">
+    <div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 animate-fade-in"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        backdropFilter: 'blur(4px)',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 flex flex-col"
+        style={{
+          maxHeight: '90vh',
+          height: 'auto',
+          margin: 'auto 0',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex items-center justify-between">
+        <div
+          className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex items-center justify-between"
+          style={{ flexShrink: 0 }}
+        >
           <div className="flex items-center space-x-2">
             <i className="fas fa-paper-plane text-yellow-300"></i>
             <h3 className="text-lg font-bold">
@@ -109,7 +129,15 @@ const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' })
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 max-h-[85vh] overflow-y-auto">
+        <div
+          className="p-6 overflow-y-auto"
+          style={{
+            overflowY: 'auto',
+            flex: '1 1 auto',
+            minHeight: 0,
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           {success ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
@@ -139,13 +167,15 @@ const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' })
               {product && (
                 <div className="flex items-center space-x-4 bg-gray-50 p-3 rounded-xl border border-gray-200 mb-4">
                   <img
-                    src={
-                      product.images?.[0]?.url
-                        ? (product.images[0].url.startsWith('http')
-                            ? product.images[0].url
-                            : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/products/${product.images[0].url}`)
-                        : '/default-product.png'
-                    }
+                    src={(() => {
+                      const rawFirst = product.images?.[0];
+                      const firstUrl = typeof rawFirst === 'string' ? rawFirst : rawFirst?.url;
+                      return firstUrl
+                        ? (firstUrl.startsWith('http')
+                            ? firstUrl
+                            : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/uploads/products/${firstUrl}`)
+                        : '/default-product.png';
+                    })()}
                     alt={product.name}
                     className="w-16 h-16 object-cover rounded-lg border bg-white flex-shrink-0"
                     onError={(e) => { e.target.onerror = null; e.target.src = '/default-product.png'; }}

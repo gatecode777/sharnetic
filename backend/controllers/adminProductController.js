@@ -494,6 +494,52 @@ exports.exportProducts = async (req, res) => {
   }
 };
 
+// Helper to extract clean image URLs from strings, arrays, or JSON arrays
+const extractImageUrls = (rawImageField) => {
+  if (!rawImageField) return [];
+
+  if (Array.isArray(rawImageField)) {
+    return rawImageField
+      .map((item) => (typeof item === "string" ? item : item?.url))
+      .filter(Boolean)
+      .map((u) => u.trim().replace(/^["'\[\]]+|["'\[\]]+$/g, ""))
+      .filter(Boolean);
+  }
+
+  let str = String(rawImageField).trim();
+  if (!str) return [];
+
+  // Try JSON parse if formatted as '["http...", "http..."]'
+  if (str.startsWith("[") && str.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(str);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((u) => String(u).trim().replace(/^["'\[\]]+|["'\[\]]+$/g, ""))
+          .filter(Boolean);
+      }
+    } catch (e) {
+      str = str.replace(/^\[|\]$/g, "");
+    }
+  }
+
+  const urls = [];
+  const matches = str.match(/https?:\/\/[^\s"',;\]]+/gi);
+  if (matches && matches.length > 0) {
+    matches.forEach((u) => {
+      const clean = u.trim().replace(/^["'\[\]]+|["'\[\]]+$/g, "");
+      if (clean) urls.push(clean);
+    });
+  } else {
+    str.split(/[\n,;]+/).forEach((part) => {
+      const clean = part.trim().replace(/^["'\[\]]+|["'\[\]]+$/g, "");
+      if (clean) urls.push(clean);
+    });
+  }
+
+  return [...new Set(urls)];
+};
+
 // ==================== BULK IMPORT PRODUCTS ====================
 exports.bulkImportProducts = async (req, res) => {
   try {
@@ -527,107 +573,171 @@ exports.bulkImportProducts = async (req, res) => {
     let updatedCount = 0;
     const errors = [];
 
+    // Upfront lookup for existing products in this batch (avoids slow sequential DB roundtrips)
+    const itemNames = items
+      .map((it) => (it.name || it.product_name || it.title || "").trim())
+      .filter(Boolean);
+    const existingProducts = await Product.find({ name: { $in: itemNames } });
+    const existingMap = new Map();
+    existingProducts.forEach((p) => existingMap.set(p.name, p));
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const rowNum = i + 1;
 
-      if (!item.name || !item.name.trim()) {
-        errors.push({ row: rowNum, error: "Product name is required" });
-        continue;
-      }
+      try {
+        // Name resolution
+        const name = (item.name || item.product_name || item.title || "").trim();
+        if (!name) {
+          errors.push({ row: rowNum, error: "Product name is required" });
+          continue;
+        }
 
-      const name = item.name.trim();
-      const price = parseFloat(item.price);
-      if (isNaN(price) || price < 0) {
-        errors.push({ row: rowNum, error: `Invalid price: ${item.price}` });
-        continue;
-      }
+        // Price resolution
+        const rawPrice = item.price !== undefined ? item.price : item.pricing?.price;
+        const price = parseFloat(String(rawPrice ?? "0").replace(/[^0-9.]/g, ""));
+        if (isNaN(price) || price < 0) {
+          errors.push({ row: rowNum, error: `Invalid price: ${item.price}` });
+          continue;
+        }
 
-      // Resolve category
-      let categoryId = null;
-      const catKey = (item.category || item.categoryName || "").toLowerCase().trim();
-      if (catKey && catMap.has(catKey)) {
-        categoryId = catMap.get(catKey);
-      } else if (catKey) {
-        try {
-          const newSlug = slugify(item.category || item.categoryName, { lower: true, strict: true }) || `cat-${Date.now()}`;
-          const newCat = await Category.create({
-            name: (item.category || item.categoryName).trim(),
-            slug: newSlug,
-          });
-          categoryId = newCat._id;
-          catMap.set(catKey, newCat._id);
-          catMap.set(newCat._id.toString(), newCat._id);
-        } catch (e) {
+        // MRP / Old Price resolution
+        const rawMrp = item.mrp !== undefined ? item.mrp : (item.oldPrice || item.retail_price || item.list_price);
+        const oldPrice = rawMrp ? parseFloat(String(rawMrp).replace(/[^0-9.]/g, "")) : undefined;
+
+        // Category resolution (auto-creates if missing)
+        let categoryId = null;
+        const catName = (item.category || item.categoryName || item.category_name || item.mainCategory || "").trim();
+        const catKey = catName.toLowerCase();
+        if (catKey && catMap.has(catKey)) {
+          categoryId = catMap.get(catKey);
+        } else if (catName) {
+          try {
+            const newSlug = slugify(catName, { lower: true, strict: true }) || `cat-${Date.now()}`;
+            const newCat = await Category.create({
+              name: catName,
+              slug: newSlug,
+            });
+            categoryId = newCat._id;
+            catMap.set(catKey, newCat._id);
+            catMap.set(newCat._id.toString(), newCat._id);
+          } catch (e) {
+            categoryId = defaultCatId;
+          }
+        } else {
           categoryId = defaultCatId;
         }
-      } else {
-        categoryId = defaultCatId;
-      }
 
-      // Resolve seller
-      let sellerId = null;
-      const sellerKey = (item.seller || item.sellerName || "").toLowerCase().trim();
-      if (sellerKey && sellerMap.has(sellerKey)) {
-        sellerId = sellerMap.get(sellerKey);
-      } else {
-        sellerId = defaultSellerId;
-      }
+        // Brand / Seller resolution (auto-creates verified seller for the brand)
+        let sellerId = null;
+        const sellerName = (item.brand || item.seller || item.sellerName || item.manufacturer || "").trim();
+        const sellerKey = sellerName.toLowerCase();
+        if (sellerKey && sellerMap.has(sellerKey)) {
+          sellerId = sellerMap.get(sellerKey);
+        } else if (sellerName && sellerName !== "Not specified") {
+          try {
+            let sellerSlug = slugify(sellerName, { lower: true, strict: true }) || `brand-${Date.now()}`;
+            const slugTaken = await Seller.findOne({ slug: sellerSlug });
+            if (slugTaken) sellerSlug = `${sellerSlug}-${Date.now().toString().slice(-4)}`;
 
-      // Resolve images
-      let images = [];
-      if (Array.isArray(item.images)) {
-        images = item.images.map(img => typeof img === 'string' ? { url: img, alt: name } : img);
-      } else if (typeof item.images === 'string' && item.images.trim()) {
-        images = item.images.split(/[;,]/).map(url => ({ url: url.trim(), alt: name })).filter(img => img.url);
-      }
-
-      // Check if product with same name exists
-      const existingProduct = await Product.findOne({ name });
-
-      if (existingProduct) {
-        existingProduct.pricing.price = price;
-        if (item.oldPrice) existingProduct.pricing.oldPrice = parseFloat(item.oldPrice) || undefined;
-        if (categoryId) existingProduct.category = categoryId;
-        if (sellerId) existingProduct.seller = sellerId;
-        if (item.unit) existingProduct.unit = item.unit.trim();
-        if (item.moq) existingProduct.moq = item.moq.trim();
-        if (item.description !== undefined) existingProduct.description = item.description.trim();
-        if (item.quantity !== undefined) existingProduct.stock.quantity = parseInt(item.quantity) || 0;
-        if (item.inStock !== undefined) existingProduct.stock.inStock = String(item.inStock).toLowerCase() !== 'no' && String(item.inStock).toLowerCase() !== 'false';
-        if (item.isActive !== undefined) existingProduct.isActive = String(item.isActive).toLowerCase() !== 'inactive' && String(item.isActive).toLowerCase() !== 'false';
-        if (images.length > 0) existingProduct.images = images;
-
-        await existingProduct.save();
-        updatedCount++;
-      } else {
-        let baseSlug = slugify(name, { lower: true, strict: true }) || 'product';
-        let slug = baseSlug;
-        const slugExists = await Product.findOne({ slug });
-        if (slugExists) {
-          slug = `${baseSlug}-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 100)}`;
+            const newSeller = await Seller.create({
+              name: sellerName,
+              slug: sellerSlug,
+              mainCategory: categoryId,
+              categories: [categoryId],
+              city: "Jaipur",
+              state: "Rajasthan",
+              businessType: "Manufacturer & Wholesaler",
+              yearEstablished: 2018,
+              rating: 4.8,
+              isVerified: true,
+              trustSeal: true,
+              isActive: true,
+              description: `Verified supplier and manufacturer of ${catName || "wholesale goods"}.`,
+            });
+            sellerId = newSeller._id;
+            sellerMap.set(sellerKey, newSeller._id);
+            sellerMap.set(newSeller._id.toString(), newSeller._id);
+          } catch (e) {
+            sellerId = defaultSellerId;
+          }
+        } else {
+          sellerId = defaultSellerId;
         }
 
-        await Product.create({
-          name,
-          slug,
-          category: categoryId,
-          seller: sellerId,
-          pricing: {
-            price,
-            oldPrice: item.oldPrice ? parseFloat(item.oldPrice) || undefined : undefined,
-          },
-          unit: item.unit?.trim() || "Piece",
-          moq: item.moq?.trim() || "10 Pieces",
-          description: item.description?.trim() || "",
-          images,
-          stock: {
-            quantity: item.quantity ? parseInt(item.quantity) || 0 : 50,
-            inStock: String(item.inStock).toLowerCase() !== 'no' && String(item.inStock).toLowerCase() !== 'false',
-          },
-          isActive: String(item.isActive).toLowerCase() !== 'inactive' && String(item.isActive).toLowerCase() !== 'false',
-        });
-        createdCount++;
+        // Images resolution (supports image, images, image_url, JSON arrays)
+        const rawImage = item.image !== undefined ? item.image : (item.images || item.image_url || item.image_urls);
+        const urls = extractImageUrls(rawImage);
+        const images = urls.map((url) => ({ url, alt: name }));
+
+        // Description & Specifications construction
+        const specs = [];
+        if (item.brand && item.brand !== "Not specified") specs.push(`Brand: ${item.brand.trim()}`);
+        if (item.sub_category || item.sub_categ) specs.push(`Sub-Category: ${(item.sub_category || item.sub_categ).trim()}`);
+        if (item.size && item.size !== "Not specified") specs.push(`Size: ${item.size.trim()}`);
+        if ((item.colour || item.color) && (item.colour || item.color) !== "Not specified") specs.push(`Colour: ${(item.colour || item.color).trim()}`);
+        if (item.product_id) specs.push(`Product ID: ${item.product_id.trim()}`);
+
+        let description = (item.description || "").trim();
+        if (!description && specs.length > 0) {
+          description = specs.join(" | ");
+        } else if (description && specs.length > 0) {
+          description = `${description}\n\n${specs.join(" | ")}`;
+        }
+
+        // Check if product exists (by name from upfront map or product_id)
+        let existingProduct = existingMap.get(name);
+        if (!existingProduct && item.product_id) {
+          existingProduct = await Product.findOne({
+            description: { $regex: item.product_id.trim(), $options: "i" },
+          });
+        }
+
+        if (existingProduct) {
+          existingProduct.pricing.price = price;
+          if (oldPrice !== undefined) existingProduct.pricing.oldPrice = oldPrice;
+          if (categoryId) existingProduct.category = categoryId;
+          if (sellerId) existingProduct.seller = sellerId;
+          if (item.unit) existingProduct.unit = item.unit.trim();
+          if (item.moq) existingProduct.moq = item.moq.trim();
+          if (description) existingProduct.description = description;
+          if (item.quantity !== undefined) existingProduct.stock.quantity = parseInt(item.quantity) || 0;
+          if (item.inStock !== undefined) existingProduct.stock.inStock = String(item.inStock).toLowerCase() !== "no" && String(item.inStock).toLowerCase() !== "false";
+          if (item.isActive !== undefined) existingProduct.isActive = String(item.isActive).toLowerCase() !== "inactive" && String(item.isActive).toLowerCase() !== "false";
+          if (images.length > 0) existingProduct.images = images;
+
+          await existingProduct.save();
+          updatedCount++;
+        } else {
+          let baseSlug = slugify(name, { lower: true, strict: true }) || "product";
+          const uniqueSuffix = `${Date.now().toString(36).slice(-4)}-${Math.random().toString(36).substring(2, 6)}`;
+          const slug = `${baseSlug}-${uniqueSuffix}`;
+
+          const createdProd = await Product.create({
+            name,
+            slug,
+            category: categoryId,
+            seller: sellerId,
+            pricing: {
+              price,
+              oldPrice: oldPrice || undefined,
+            },
+            unit: item.unit?.trim() || "Piece",
+            moq: item.moq?.trim() || "10 Pieces",
+            description: description || "",
+            images,
+            stock: {
+              quantity: item.quantity ? parseInt(item.quantity) || 0 : 50,
+              inStock: item.inStock !== undefined ? String(item.inStock).toLowerCase() !== "no" && String(item.inStock).toLowerCase() !== "false" : true,
+            },
+            isActive: item.isActive !== undefined ? String(item.isActive).toLowerCase() !== "inactive" && String(item.isActive).toLowerCase() !== "false" : true,
+          });
+          existingMap.set(name, createdProd);
+          createdCount++;
+        }
+      } catch (rowErr) {
+        console.error(`Row ${rowNum} error:`, rowErr.message);
+        errors.push({ row: rowNum, error: rowErr.message });
       }
     }
 

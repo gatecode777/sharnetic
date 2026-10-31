@@ -148,10 +148,12 @@ const AdminProducts = () => {
   };
 
   const getProductImage = (product, index = 0) => {
-    if (product.images?.length > 0) {
+    if (product?.images?.length > 0) {
       const img = product.images[index];
       if (!img) return '/default-product.png';
-      return img.url?.startsWith('http') ? img.url : `${BASE_URL}/uploads/products/${img.url}`;
+      const url = typeof img === 'string' ? img : img?.url;
+      if (!url) return '/default-product.png';
+      return url.startsWith('http') ? url : `${BASE_URL}/uploads/products/${url}`;
     }
     return '/default-product.png';
   };

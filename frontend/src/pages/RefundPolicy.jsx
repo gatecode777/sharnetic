@@ -92,7 +92,7 @@ const RefundPolicy = () => {
                 <div className="policy-section mb-8" id="introduction">
                     <div className="highlight-box bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <p className="mb-0 text-gray-700">
-                            Thank you for shopping with <strong>Sharnetic Technologies</strong>. We strive to ensure complete customer satisfaction with every purchase. 
+                            Thank you for shopping with <strong>Finoxis Technologies</strong>. We strive to ensure complete customer satisfaction with every purchase. 
                             If you are not entirely satisfied with your purchase, we're here to help. This Refund Policy outlines the terms and conditions 
                             for requesting and receiving refunds for products purchased through our platform.
                         </p>
@@ -314,7 +314,7 @@ const RefundPolicy = () => {
                             <div>
                                 <h3 className="font-bold text-lg mb-3 text-gray-800">Customer Support</h3>
                                 <div className="space-y-3 text-gray-700">
-                                    <p><i className="fas fa-envelope mr-2 text-blue-600"></i> Email: support@sharnetic.com</p>
+                                    <p><i className="fas fa-envelope mr-2 text-blue-600"></i> Email: support@finoxis.com</p>
                                     <p><i className="fas fa-phone mr-2 text-blue-600"></i> Phone: +91 82201 53747</p>
                                     <p><i className="fas fa-clock mr-2 text-blue-600"></i> Hours: Mon-Sun, 9 AM - 9 PM IST</p>
                                     <p><i className="fas fa-comments mr-2 text-blue-600"></i> Live Chat: Available on website</p>
@@ -323,7 +323,7 @@ const RefundPolicy = () => {
                             <div>
                                 <h3 className="font-bold text-lg mb-3 text-gray-800">Return Address</h3>
                                 <div className="text-gray-700">
-                                    <p>SHARNETIC TECHNOLOGIES RETURNS CENTER</p>
+                                    <p>FINOXIS TECHNOLOGIES RETURNS CENTER</p>
                                     <p>PLOT NO.-B, 404, 4TH FLOOR</p>
                                     <p>MANSAROVAR PLAZA, SECTOR-07</p>
                                     <p>Jaipur, Rajasthan - 302020</p>

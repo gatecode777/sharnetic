@@ -19,6 +19,9 @@ const BulkImportModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [progress, setProgress] = useState(null); // { current, total, batch, totalBatches, percent }
+
+  const BATCH_SIZE = 300;
 
   if (!isOpen) return null;
 
@@ -96,17 +99,66 @@ const BulkImportModal = ({
       setError('');
       setResult(null);
 
-      const res = await onImport(parsedRows);
+      const totalItems = parsedRows.length;
+      const totalBatches = Math.ceil(totalItems / BATCH_SIZE);
+      let totalCreated = 0;
+      let totalUpdated = 0;
+      let allErrors = [];
 
-      if (res?.data?.success) {
-        setResult(res.data);
-        if (onSuccess) onSuccess();
-      } else {
-        setError(res?.data?.message || 'Bulk import failed on server.');
+      for (let b = 0; b < totalBatches; b++) {
+        const start = b * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, totalItems);
+        const chunk = parsedRows.slice(start, end);
+
+        setProgress({
+          current: start,
+          total: totalItems,
+          batch: b + 1,
+          totalBatches,
+          percent: Math.round((start / totalItems) * 100),
+        });
+
+        try {
+          const res = await onImport(chunk);
+
+          if (res?.data?.success) {
+            totalCreated += res.data.createdCount || 0;
+            totalUpdated += res.data.updatedCount || 0;
+            if (res.data.errors && Array.isArray(res.data.errors)) {
+              allErrors.push(...res.data.errors);
+            }
+          } else {
+            allErrors.push({ row: `Batch ${b + 1}`, error: res?.data?.message || 'Server error on batch' });
+          }
+        } catch (batchErr) {
+          console.error(`Batch ${b + 1} error:`, batchErr);
+          allErrors.push({
+            row: `Batch ${b + 1}`,
+            error: batchErr.response?.data?.message || batchErr.message || 'Error processing batch',
+          });
+        }
       }
+
+      setProgress({
+        current: totalItems,
+        total: totalItems,
+        batch: totalBatches,
+        totalBatches,
+        percent: 100,
+      });
+
+      setResult({
+        success: true,
+        createdCount: totalCreated,
+        updatedCount: totalUpdated,
+        errors: allErrors,
+        message: `Import completed successfully! ${totalCreated} created, ${totalUpdated} updated out of ${totalItems.toLocaleString()} records.`,
+      });
+
+      if (onSuccess) onSuccess();
     } catch (err) {
       console.error('Import error:', err);
-      setError(err.response?.data?.message || 'Server error during import.');
+      setError(err.response?.data?.message || err.message || 'Server error during import.');
     } finally {
       setLoading(false);
     }
@@ -119,6 +171,7 @@ const BulkImportModal = ({
     setHeaders([]);
     setError('');
     setResult(null);
+    setProgress(null);
   };
 
   const handleClose = () => {
@@ -127,11 +180,32 @@ const BulkImportModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
+    <div
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 animate-fade-in"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        backdropFilter: 'blur(4px)',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+      }}
+      onClick={handleClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col border border-gray-100"
+        style={{
+          maxHeight: '90vh',
+          height: 'auto',
+          margin: 'auto 0',
+          overflow: 'hidden',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex items-center justify-between">
+        <div
+          className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex items-center justify-between"
+          style={{ flexShrink: 0 }}
+        >
           <div className="flex items-center space-x-2">
             <i className="fas fa-file-import text-yellow-300 text-lg"></i>
             <h3 className="text-lg font-bold">{title}</h3>
@@ -139,13 +213,22 @@ const BulkImportModal = ({
           <button
             onClick={handleClose}
             className="text-white hover:text-gray-200 text-2xl font-bold leading-none focus:outline-none"
+            aria-label="Close"
           >
             &times;
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6 text-sm text-gray-700">
+        <div
+          className="p-5 sm:p-6 space-y-5 text-sm text-gray-700"
+          style={{
+            overflowY: 'auto',
+            flex: '1 1 auto',
+            minHeight: 0,
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           
           {/* Step 1: Download Template */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -165,6 +248,30 @@ const BulkImportModal = ({
               <span>Download Sample CSV</span>
             </button>
           </div>
+
+          {/* Real-time Import Progress Bar */}
+          {loading && progress && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-blue-900 mb-2">
+                <span className="flex items-center">
+                  <i className="fas fa-spinner fa-spin mr-2 text-blue-600 text-sm"></i>
+                  Importing: {progress.current.toLocaleString()} / {progress.total.toLocaleString()} records
+                </span>
+                <span className="bg-blue-600 text-white px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                  Batch {progress.batch} of {progress.totalBatches} ({progress.percent}%)
+                </span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden shadow-inner">
+                <div
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.max(4, progress.percent)}%` }}
+                ></div>
+              </div>
+              <p className="text-[11px] text-blue-700 mt-2">
+                Chunking records in safe batches to avoid request payload limits and server timeouts. Please keep this modal open.
+              </p>
+            </div>
+          )}
 
           {/* Success Result Alert */}
           {result && (
@@ -305,7 +412,10 @@ const BulkImportModal = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div
+          className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between"
+          style={{ flexShrink: 0 }}
+        >
           <button
             type="button"
             onClick={handleClose}
@@ -326,19 +436,19 @@ const BulkImportModal = ({
               onClick={handleExecuteImport}
               className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white transition flex items-center space-x-2 ${
                 loading || parsedRows.length === 0
-                  ? 'bg-gray-400 cursor-not-allowed'
+                  ? 'bg-blue-500 cursor-not-allowed opacity-90'
                   : 'bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg'
               }`}
             >
               {loading ? (
                 <>
                   <i className="fas fa-spinner fa-spin"></i>
-                  <span>Importing...</span>
+                  <span>Importing {progress?.percent ?? 0}%...</span>
                 </>
               ) : (
                 <>
                   <i className="fas fa-check"></i>
-                  <span>Start Import ({parsedRows.length})</span>
+                  <span>Start Import ({parsedRows.length.toLocaleString()})</span>
                 </>
               )}
             </button>
