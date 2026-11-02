@@ -1,6 +1,6 @@
 // components/MainHeader.jsx
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EnquiryModal from './EnquiryModal';
 
@@ -10,6 +10,8 @@ const MainHeader = () => {
   const [isRequirementModalOpen, setIsRequirementModalOpen] = useState(false);
   const { user, logout, isLoggedIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -163,19 +165,70 @@ const MainHeader = () => {
           <div className="container mx-auto px-6 py-3 max-w-7xl">
             <div className="flex flex-wrap items-center justify-between text-xs font-bold tracking-wide">
               <div className="flex flex-wrap items-center space-x-8 py-1">
-                <Link to="/" className="text-gray-700 hover:text-blue-600 transition flex items-center">
-                  <i className="fas fa-home mr-1.5 text-gray-400"></i> Home
+                <Link
+                  to="/"
+                  className={`transition flex items-center ${
+                    pathname === '/'
+                      ? 'text-blue-700 font-extrabold'
+                      : 'text-gray-700 hover:text-blue-600 font-bold'
+                  }`}
+                >
+                  <i className={`fas fa-home mr-1.5 ${pathname === '/' ? 'text-blue-600' : 'text-gray-400'}`}></i> Home
                 </Link>
-                <Link to="/shop" className="text-gray-700 hover:text-blue-600 transition flex items-center">
-                  <i className="fas fa-th-large mr-1.5 text-gray-400"></i> Products Directory
+
+                <Link
+                  to="/shop"
+                  className={`transition flex items-center ${
+                    pathname.startsWith('/shop') || pathname.startsWith('/product')
+                      ? 'text-blue-700 font-extrabold'
+                      : 'text-gray-700 hover:text-blue-600 font-bold'
+                  }`}
+                >
+                  <i
+                    className={`fas fa-th-large mr-1.5 ${
+                      pathname.startsWith('/shop') || pathname.startsWith('/product')
+                        ? 'text-blue-600'
+                        : 'text-gray-400'
+                    }`}
+                  ></i>{' '}
+                  Products Directory
                 </Link>
-                <Link to="/sellers" className="text-blue-700 hover:text-blue-900 transition flex items-center">
-                  <i className="fas fa-industry mr-1.5 text-blue-600"></i> Verified Suppliers
+
+                <Link
+                  to="/sellers"
+                  className={`transition flex items-center ${
+                    pathname.startsWith('/seller')
+                      ? 'text-blue-700 font-extrabold'
+                      : 'text-gray-700 hover:text-blue-600 font-bold'
+                  }`}
+                >
+                  <i
+                    className={`fas fa-industry mr-1.5 ${
+                      pathname.startsWith('/seller') ? 'text-blue-600' : 'text-gray-400'
+                    }`}
+                  ></i>{' '}
+                  Verified Suppliers
                 </Link>
-                <Link to="/about" className="text-gray-700 hover:text-blue-600 transition">
+
+                <Link
+                  to="/about"
+                  className={`transition ${
+                    pathname.startsWith('/about')
+                      ? 'text-blue-700 font-extrabold'
+                      : 'text-gray-700 hover:text-blue-600 font-bold'
+                  }`}
+                >
                   About Us
                 </Link>
-                <Link to="/contact" className="text-gray-700 hover:text-blue-600 transition">
+
+                <Link
+                  to="/contact"
+                  className={`transition ${
+                    pathname.startsWith('/contact')
+                      ? 'text-blue-700 font-extrabold'
+                      : 'text-gray-700 hover:text-blue-600 font-bold'
+                  }`}
+                >
                   Contact
                 </Link>
               </div>
