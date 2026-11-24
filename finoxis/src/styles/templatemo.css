@@ -1,0 +1,493 @@
+/* Flipkart-like Theme Colors */
+:root {
+  --primary: #2874f0;
+  --primary-light: #e3f2fd;
+  --secondary: #fb641b;
+  --dark: #212121;
+  --light-gray: #f1f3f6;
+  --gray: #878787;
+  --success: #388e3c;
+}
+
+body {
+  background-color: var(--light-gray);
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+/* Header Styles */
+.header-top {
+  background-color: var(--primary);
+}
+
+.search-box {
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-box input:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.login-btn {
+  background: linear-gradient(to bottom, #fff, #f1f3f6);
+  color: var(--primary);
+  font-weight: 500;
+  border: 1px solid #dbdbdb;
+  border-radius: 2px;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: var(--secondary);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Category Card */
+.category-card {
+  background: white;
+  border-radius: 4px;
+  padding: 16px 0;
+  text-align: center;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+}
+
+.category-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: #e0e0e0;
+}
+
+.category-img {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+}
+
+/* Deal Card */
+.deal-card {
+  background: white;
+  border-radius: 4px;
+  padding: 16px;
+  transition: transform 0.3s;
+  border: 1px solid #e0e0e0;
+}
+
+.deal-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.product-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+
+.price {
+  color: var(--dark);
+  font-weight: 500;
+  font-size: 18px;
+}
+
+.original-price {
+  color: var(--gray);
+  text-decoration: line-through;
+  font-size: 14px;
+}
+
+.discount {
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.add-to-cart-btn {
+  background-color: var(--secondary);
+  color: white;
+  border: none;
+  border-radius: 2px;
+  padding: 8px 16px;
+  font-weight: 500;
+  width: 100%;
+  transition: background-color 0.3s;
+}
+
+.add-to-cart-btn:hover {
+  background-color: #f55600;
+}
+
+/* Banner Slider */
+.banner-slider {
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Navigation Links */
+.nav-link {
+  color: var(--dark);
+  font-weight: 500;
+  padding: 8px 16px;
+  border-bottom: 3px solid transparent;
+}
+
+.nav-link:hover {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Footer */
+
+.footer-container {
+  max-width: 1470px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.footer-section {
+  background-color: var(--dark);
+  color: white;
+}
+
+.footer-links a {
+  color: #e0e0e0;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.footer-links a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+
+/* Navigation Links */
+.nav-link {
+  color: var(--dark);
+  font-weight: 500;
+  padding: 8px 16px;
+  border-bottom: 3px solid transparent;
+}
+
+.nav-link:hover {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Product Styles */
+.product-card {
+  background: white;
+  border-radius: 4px;
+  padding: 16px;
+  transition: all 0.3s;
+  border: 1px solid #e0e0e0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+}
+
+.product-img {
+  width: 100%;
+  height: 200px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.product-name {
+  color: var(--dark);
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  line-height: 1.4;
+  flex-grow: 1;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.price {
+  color: var(--dark);
+  font-weight: 500;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.original-price {
+  color: var(--gray);
+  text-decoration: line-through;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.discount {
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.rating {
+  background-color: var(--success);
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.rating i {
+  font-size: 10px;
+  margin-right: 2px;
+}
+
+.add-to-cart-btn {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 2px;
+  padding: 10px 0;
+  font-weight: 500;
+  width: 100%;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  margin-top: 8px;
+}
+
+.add-to-cart-btn:hover {
+  background-color: #1a68e8;
+}
+
+.buy-now-btn {
+  background-color: var(--secondary);
+  color: white;
+  border: none;
+  border-radius: 2px;
+  padding: 10px 0;
+  font-weight: 500;
+  width: 100%;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  margin-top: 8px;
+}
+
+.buy-now-btn:hover {
+  background-color: #f55600;
+}
+
+/* Filter Sidebar */
+.filter-sidebar {
+  background: white;
+  border-radius: 4px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  height: fit-content;
+  position: sticky;
+  top: 120px;
+}
+
+.filter-title {
+  color: var(--dark);
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.filter-section {
+  margin-bottom: 20px;
+}
+
+.filter-section h4 {
+  color: var(--dark);
+  font-weight: 500;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.filter-option input {
+  margin-right: 8px;
+  accent-color: var(--primary);
+}
+
+.filter-option label {
+  color: var(--dark);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.price-range {
+  width: 100%;
+}
+
+.price-inputs {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.price-inputs input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Sort Options */
+.sort-options {
+  background: white;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.sort-options select {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 40px;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pagination button.active {
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.pagination button:hover:not(.active) {
+  background-color: #f5f5f5;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  background: white;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+/* Empty State */
+.empty-state {
+  background: white;
+  border-radius: 4px;
+  padding: 40px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+}
+
+.empty-state i {
+  font-size: 48px;
+  color: #ccc;
+  margin-bottom: 16px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .category-img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .product-img {
+    height: 140px;
+  }
+}
+
+
+
+/* Toast Animation */
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Cart Badge Animation */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 0.5s ease-out;
+}
+
+/* Button Bounce Animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 0.3s ease-out;
+}

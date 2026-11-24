@@ -1,0 +1,127 @@
+/* Custom Design System & Header Styling */
+
+/* Middle Header Spacing */
+.middle-header-wrapper {
+  padding-top: 20px !important;
+  padding-bottom: 20px !important;
+}
+
+/* Modern Inset Search Bar */
+.search-container-modern {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 12px;
+  padding: 4px 6px 4px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease-in-out;
+  width: 100%;
+}
+
+.search-container-modern:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.search-category-pill {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.search-input-field {
+  flex: 1;
+  border: none !important;
+  outline: none !important;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #1f2937;
+  background: transparent;
+}
+
+.search-input-field::placeholder {
+  color: #9ca3af;
+}
+
+.search-submit-btn {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  padding: 9px 22px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.search-submit-btn:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.search-submit-btn * {
+  color: #ffffff !important;
+}
+
+/* Post Requirement Button - Vibrant Orange with High Contrast White Font */
+.btn-requirement {
+  background-color: #ea580c !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  padding: 10px 20px !important;
+  border-radius: 10px !important;
+  border: 1px solid #c2410c !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(234, 88, 12, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-requirement:hover {
+  background-color: #c2410c !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 8px rgba(234, 88, 12, 0.35);
+}
+
+.btn-requirement * {
+  color: #ffffff !important;
+}
+
+/* Header Login Button */
+.btn-header-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #374151 !important;
+  background-color: #ffffff !important;
+  border: 1.5px solid #d1d5db !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-header-login:hover {
+  border-color: #2563eb !important;
+  color: #2563eb !important;
+  background-color: #eff6ff !important;
+}

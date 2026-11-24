@@ -1,0 +1,41 @@
+{
+  "name": "finoxis",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Finoxis - B2B Marketplace & Verified Indian Manufacturers Directory (Next.js)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "create-admin": "node --env-file=.env scripts/createAdmin.js",
+    "seed:sellers": "node --env-file=.env scripts/seedSellers.js",
+    "seed:1000-sellers": "node --env-file=.env scripts/seed1000Sellers.js",
+    "inspect-data": "node --env-file=.env scripts/inspectData.js",
+    "check-image-hosts": "node --env-file=.env scripts/checkImageHostnames.js",
+    "migrate:image-https": "node --env-file=.env scripts/migrateImageUrlsToHttps.js",
+    "test:rukminim": "node --env-file=.env scripts/testRukminim.js"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.4.2",
+    "axios": "^1.21.1",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.13.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-toastify": "^11.2.0",
+    "server-only": "^0.0.1",
+    "slugify": "^1.6.9",
+    "uuid": "^13.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.6"
+  }
+}
