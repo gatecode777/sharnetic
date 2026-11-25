@@ -21,8 +21,8 @@ const ProductForm = () => {
     name: '',
     category: '',
     seller: '',
-    moq: '10 Pieces',
-    unit: 'Piece',
+    moq: '',  // left empty -> saved as "10 Pieces"
+    unit: '', // left empty -> saved as "Piece"
     description: '',
     price: '',
     oldPrice: '',
@@ -82,8 +82,8 @@ const ProductForm = () => {
           name: p.name || '',
           category: p.category?._id || p.category || '',
           seller: p.seller?._id || p.seller || '',
-          moq: p.moq || '10 Pieces',
-          unit: p.unit || 'Piece',
+          moq: p.moq || '',
+          unit: p.unit || '',
           description: p.description || '',
           price: p.pricing?.price ?? '',
           oldPrice: p.pricing?.oldPrice ?? '',

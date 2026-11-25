@@ -3,7 +3,8 @@ import JsonLd from '@/components/JsonLd';
 import { getActiveProductCount } from '@/server/pageData';
 import { organizationJsonLd } from '@/lib/site';
 
-export const dynamic = 'force-dynamic';
+// Cached; product count refreshed in the background at most once a minute.
+export const revalidate = 60;
 
 export const metadata = {
   title: 'About Us',

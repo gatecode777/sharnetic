@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { productAPI, adminCategoryAPI, sellerAPI } from '@/lib/api';
+import { productAPI, adminCategoryAPI } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import EnquiryModal from '@/components/EnquiryModal';
 
@@ -13,7 +13,7 @@ const toPage = (value) => {
 
 // initial* props come from the server for the URL being opened (same API data),
 // so the first HTML already contains the products of that page.
-const ProductsPage = ({ initialFilters, initialData, initialCategories, initialSellers }) => {
+const ProductsPage = ({ initialFilters, initialData, initialCategories }) => {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -35,28 +35,21 @@ const ProductsPage = ({ initialFilters, initialData, initialCategories, initialS
     const [currentPage, setCurrentPage] = useState(initialFilters?.page || 1);
     const itemsPerPage = 12;
 
-    // Categories & Sellers from API
+    // Categories from API
     const [categories, setCategories] = useState(initialCategories || []);
-    const [sellers, setSellers] = useState(initialSellers || []);
 
     // Modal state
     const [enquiryProduct, setEnquiryProduct] = useState(null);
     const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
 
-    // Fetch Categories & Sellers
+    // Fetch Categories
     useEffect(() => {
-        if (initialCategories && initialSellers) return; // already rendered by the server
+        if (initialCategories) return; // already rendered by the server
         const fetchFilters = async () => {
             try {
-                const [catRes, sellerRes] = await Promise.all([
-                    adminCategoryAPI.getAll({ isActive: true }),
-                    sellerAPI.getAll({ limit: 50 }),
-                ]);
+                const catRes = await adminCategoryAPI.getAll({ isActive: true });
                 if (catRes.data.success) {
                     setCategories(catRes.data.categories || []);
-                }
-                if (sellerRes.data.success) {
-                    setSellers(sellerRes.data.sellers || []);
                 }
             } catch (e) {
                 console.error('fetchFilters error:', e);
@@ -163,12 +156,6 @@ const ProductsPage = ({ initialFilters, initialData, initialCategories, initialS
         if (page !== currentPage) window.history.pushState(null, '', buildHref({ page }));
     };
 
-    // When a filter changes, keep an existing ?page=/filter URL in step (back to page 1).
-    const syncUrlAfterFilter = (overrides) => {
-        if (!window.location.search) return;
-        window.history.replaceState(null, '', buildHref({ ...overrides, page: 1 }));
-    };
-
     const handleCategoryChange = (catId) => {
         const next = catId === selectedCategory ? '' : catId;
         setSelectedCategory(next);
@@ -176,13 +163,6 @@ const ProductsPage = ({ initialFilters, initialData, initialCategories, initialS
         // Same in-place filter as before; the address bar now shows /shop/<category-slug>.
         const href = buildHref({ category: next, page: 1 });
         if (href !== window.location.pathname + window.location.search) window.history.pushState(null, '', href);
-    };
-
-    const handleSellerChange = (sellerId) => {
-        const next = sellerId === selectedSeller ? '' : sellerId;
-        setSelectedSeller(next);
-        setCurrentPage(1);
-        syncUrlAfterFilter({ seller: next });
     };
 
     const clearAllFilters = () => {
@@ -260,7 +240,7 @@ const ProductsPage = ({ initialFilters, initialData, initialCategories, initialS
                             </div>
 
                             {/* Category Filter */}
-                            <div className="mb-6">
+                            <div>
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-2">
                                     Industry Categories
                                 </label>
@@ -293,39 +273,6 @@ const ProductsPage = ({ initialFilters, initialData, initialCategories, initialS
                                                     {cat.productCount}
                                                 </span>
                                             )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Seller / Supplier Filter */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-2">
-                                    Verified Suppliers
-                                </label>
-                                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                                    <button
-                                        onClick={() => handleSellerChange('')}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition ${
-                                            !selectedSeller
-                                                ? 'bg-blue-600 text-white'
-                                                : 'text-gray-700 hover:bg-gray-100'
-                                        }`}
-                                    >
-                                        <span>All Suppliers</span>
-                                    </button>
-                                    {sellers.map((s) => (
-                                        <button
-                                            key={s._id}
-                                            onClick={() => handleSellerChange(s._id)}
-                                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition ${
-                                                selectedSeller === s._id
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'text-gray-700 hover:bg-gray-100'
-                                            }`}
-                                        >
-                                            <span className="truncate" title={s.name}>{s.name}</span>
-                                            <span className="text-[10px] text-gray-400">({s.city})</span>
                                         </button>
                                     ))}
                                 </div>

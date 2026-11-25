@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { adminAuth } from '@/lib/api';
+import { cleanName, nameError, nameInputProps } from '@/lib/validation';
 
 const AdminProfile = () => {
   const router = useRouter();
@@ -32,7 +33,7 @@ const AdminProfile = () => {
         if (res.data.success) {
           const a = res.data.admin;
           setAdmin(a);
-          setProfileForm({ fullName: a.fullName || '', email: a.email || '' });
+          setProfileForm({ fullName: cleanName(a.fullName || ''), email: a.email || '' });
         }
       } catch (err) {
         if (err.response?.status === 401) router.push('/admin/login');
@@ -46,8 +47,9 @@ const AdminProfile = () => {
   // ── Profile update ──────────────────────────────────────────────────────────
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    if (!profileForm.fullName.trim()) {
-      setProfileMsg({ type: 'error', text: 'Full name is required' });
+    const invalid = nameError(profileForm.fullName, { label: 'Full name' });
+    if (invalid) {
+      setProfileMsg({ type: 'error', text: invalid });
       return;
     }
     try {
@@ -245,8 +247,9 @@ const AdminProfile = () => {
                     <i className="fas fa-user ap-input-icon"></i>
                     <input
                       type="text"
+                      {...nameInputProps}
                       value={profileForm.fullName}
-                      onChange={(e) => setProfileForm((p) => ({ ...p, fullName: e.target.value }))}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, fullName: cleanName(e.target.value) }))}
                       placeholder="Enter your full name"
                       required
                     />

@@ -5,7 +5,12 @@ import { getProductPageData } from '@/server/pageData';
 import { productJsonLd, productMetadata } from '@/server/seo';
 import { productPath } from '@/lib/routes';
 
-export const dynamic = 'force-dynamic';
+// Each product page is built on its first visit, then served from cache and refreshed
+// in the background at most every 5 minutes (admin edits show up within 5 minutes).
+export const revalidate = 300;
+export async function generateStaticParams() {
+  return []; // build nothing up front; cache each page on first request
+}
 
 // /shop/<category-slug>/<product-slug>
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { API_URL } from '@/lib/config';
+import { cleanName, cleanPhone, cleanEmail, nameError, phoneError, emailError, phoneInputProps, nameInputProps } from '@/lib/validation';
 
 const Contact = () => {
     const [formData, setFormData] = useState({
@@ -24,19 +25,14 @@ const Contact = () => {
     const validateForm = () => {
         const newErrors = {};
 
-        if (!formData.name.trim()) {
-            newErrors.name = 'Name is required';
-        }
+        const nameMsg = nameError(formData.name);
+        if (nameMsg) newErrors.name = nameMsg;
 
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = 'Please enter a valid email address';
-        }
+        const emailMsg = emailError(formData.email);
+        if (emailMsg) newErrors.email = emailMsg;
 
-        if (formData.phone && !/^[0-9]{10}$/.test(formData.phone)) {
-            newErrors.phone = 'Please enter a valid 10-digit phone number';
-        }
+        const phoneMsg = phoneError(formData.phone, { required: false });
+        if (phoneMsg) newErrors.phone = phoneMsg;
 
         if (!formData.subject.trim()) {
             newErrors.subject = 'Subject is required';
@@ -53,7 +49,9 @@ const Contact = () => {
     };
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name } = e.target;
+        const clean = { name: cleanName, phone: cleanPhone, email: cleanEmail }[name];
+        const value = clean ? clean(e.target.value) : e.target.value;
         setFormData(prev => ({ ...prev, [name]: value }));
         // Clear error for this field when user starts typing
         if (errors[name]) {
@@ -208,6 +206,7 @@ const Contact = () => {
                                             type="text"
                                             id="name"
                                             name="name"
+                                            {...nameInputProps}
                                             value={formData.name}
                                             onChange={handleChange}
                                             placeholder="Enter your full name"
@@ -246,6 +245,7 @@ const Contact = () => {
                                             type="tel"
                                             id="phone"
                                             name="phone"
+                                            {...phoneInputProps}
                                             value={formData.phone}
                                             onChange={handleChange}
                                             placeholder="Enter your phone number"

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { cleanName, cleanPhone, cleanEmail, nameError, phoneError, emailError, phoneInputProps, NAME_MAX_LENGTH } from '@/lib/validation';
 
 const Register = () => {
   const { register } = useAuth();
@@ -23,7 +24,10 @@ const Register = () => {
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name } = e.target;
+    const clean = { firstName: cleanName, lastName: cleanName, phone: cleanPhone, email: cleanEmail }[name];
+    const value = clean ? clean(e.target.value) : e.target.value;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError('');
   };
 
@@ -44,6 +48,13 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const invalid =
+      nameError(formData.firstName, { label: 'First name' }) ||
+      nameError(formData.lastName, { label: 'Last name' }) ||
+      emailError(formData.email) ||
+      phoneError(formData.phone, { label: 'Phone', required: false });
+    if (invalid) return setError(invalid);
 
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match');
@@ -131,6 +142,8 @@ const Register = () => {
                   <input
                     type="text"
                     name="firstName"
+                    maxLength={NAME_MAX_LENGTH}
+                    autoComplete="off"
                     value={formData.firstName}
                     onChange={handleChange}
                     placeholder="John"
@@ -145,6 +158,8 @@ const Register = () => {
                   <input
                     type="text"
                     name="lastName"
+                    maxLength={NAME_MAX_LENGTH}
+                    autoComplete="off"
                     value={formData.lastName}
                     onChange={handleChange}
                     placeholder="Doe"
@@ -165,7 +180,7 @@ const Register = () => {
                   onChange={handleChange}
                   placeholder="you@example.com"
                   required
-                  autoComplete="email"
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -177,9 +192,10 @@ const Register = () => {
                 <input
                   type="tel"
                   name="phone"
+                  {...phoneInputProps}
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="+91 98765 43210"
+                  placeholder="9876543210"
                 />
               </div>
             </div>

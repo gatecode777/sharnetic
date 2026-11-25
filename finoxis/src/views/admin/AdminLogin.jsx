@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { cleanEmail, emailError } from '@/lib/validation';
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({
@@ -13,15 +14,21 @@ const AdminLogin = () => {
   const router = useRouter();
 
   const handleChange = (e) => {
+    const { name } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: name === 'email' ? cleanEmail(e.target.value) : e.target.value,
     });
     setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const invalid = emailError(formData.email);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setLoading(true);
     setError('');
 

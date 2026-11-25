@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { cleanEmail, emailError } from '@/lib/validation';
 
 const Login = () => {
   const { login } = useAuth();
@@ -19,12 +20,16 @@ const Login = () => {
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name } = e.target;
+    const value = name === 'email' ? cleanEmail(e.target.value) : e.target.value;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const invalid = emailError(formData.email);
+    if (invalid) return setError(invalid);
     setLoading(true);
     setError('');
     try {

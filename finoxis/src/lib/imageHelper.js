@@ -14,6 +14,12 @@ export const formatImageUrl = (rawImage) => {
 
   url = url.trim();
 
+  // 0. Hosts that never answer (connections hang, so onError never fires and the card stays blank).
+  //    Used by the eBook covers. Show the default image straight away instead.
+  if (/^https?:\/\/static0\d\.digital\.flipkart\.com\//i.test(url)) {
+    return '/default-product.png';
+  }
+
   // 1. Upgrade Flipkart legacy HTTP CDNs (img5a/img6a) to Flipkart's official secure CDN (rukminim1)
   if (/https?:\/\/img[0-9]a\.flixcart\.com/i.test(url)) {
     return url.replace(/https?:\/\/img[0-9]a\.flixcart\.com/i, 'https://rukminim1.flixcart.com');

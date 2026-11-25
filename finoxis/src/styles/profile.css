@@ -116,8 +116,6 @@
 /* Cards */
 .profile-header-card,
 .profile-form-card,
-.orders-card,
-.addresses-card,
 .password-card,
 .delete-card {
   background: var(--profile-white);
@@ -200,8 +198,7 @@
   color: var(--profile-text);
 }
 
-.edit-btn,
-.add-address-btn {
+.edit-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -215,8 +212,7 @@
   font-size: 0.85rem;
 }
 
-.edit-btn:hover,
-.add-address-btn:hover {
+.edit-btn:hover {
   border-color: var(--profile-primary);
   color: var(--profile-primary);
   transform: translateY(-2px);
@@ -247,8 +243,7 @@
 
 /* Forms */
 .profile-form,
-.password-form,
-.address-form {
+.password-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -365,262 +360,7 @@
   transform: translateY(-2px);
 }
 
-/* Orders List */
-.orders-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.order-item-p {
-  border: 1px solid var(--profile-border);
-  border-radius: var(--profile-radius);
-  overflow: hidden;
-  transition: var(--profile-transition);
-}
-
-.order-item-p:hover {
-  box-shadow: var(--profile-shadow);
-}
-
-.order-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: var(--profile-bg);
-  border-bottom: 1px solid var(--profile-border);
-}
-
-.order-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.order-id {
-  font-weight: 600;
-  color: var(--profile-text);
-}
-
-.order-date {
-  font-size: 0.8rem;
-  color: var(--profile-text-light);
-}
-
-.order-status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.status-delivered {
-  background: #e8f5e9;
-  color: var(--profile-primary);
-}
-
-.status-processing {
-  background: #fff3e0;
-  color: #ff9800;
-}
-
-.status-shipped {
-  background: #e3f2fd;
-  color: #2196f3;
-}
-
-.status-cancelled {
-  background: #ffebee;
-  color: var(--profile-danger);
-}
-
-.order-items {
-  padding: 1rem;
-  border-bottom: 1px solid var(--profile-border);
-}
-
-.order-item-preview {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 0;
-}
-
-.order-item-preview img {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.item-details {
-  flex: 1;
-}
-
-.item-name {
-  font-weight: 500;
-  color: var(--profile-text);
-  margin-bottom: 0.25rem;
-}
-
-.item-qty {
-  font-size: 0.8rem;
-  color: var(--profile-text-light);
-}
-
-.more-items {
-  padding: 0.5rem;
-  text-align: center;
-  color: var(--profile-text-light);
-  font-size: 0.85rem;
-}
-
-.order-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: var(--profile-bg);
-}
-
-.order-total {
-  font-size: 1rem;
-}
-
-.order-total strong {
-  font-size: 1.2rem;
-  color: var(--profile-primary);
-}
-
-.view-order-btn {
-  padding: 0.5rem 1rem;
-  background: none;
-  border: 1px solid var(--profile-border);
-  border-radius: 6px;
-  color: var(--profile-text-light);
-  cursor: pointer;
-  transition: var(--profile-transition);
-}
-
-.view-order-btn:hover {
-  border-color: var(--profile-primary);
-  color: var(--profile-primary);
-}
-
-/* Addresses */
-.addresses-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.address-item {
-  position: relative;
-  border: 1px solid var(--profile-border);
-  border-radius: var(--profile-radius);
-  padding: 1.5rem;
-  transition: var(--profile-transition);
-}
-
-.address-item.default {
-  border-color: var(--profile-primary);
-  background: rgba(46, 125, 50, 0.02);
-}
-
-.default-badge {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: var(--profile-primary);
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.address-type {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  font-weight: 600;
-  color: var(--profile-primary);
-}
-
-.address-details p {
-  margin: 0.25rem 0;
-  color: var(--profile-text);
-  line-height: 1.5;
-}
-
-.address-name {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.address-location,
-.address-phone {
-  font-size: 0.9rem;
-  color: var(--profile-text-light);
-}
-
-.address-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--profile-border);
-}
-
-.address-actions button {
-  padding: 0.5rem 1rem;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: var(--profile-transition);
-  font-size: 0.85rem;
-}
-
-.address-edit {
-  color: var(--profile-primary);
-}
-
-.address-edit:hover {
-  background: rgba(46, 125, 50, 0.1);
-}
-
-.address-default {
-  color: #ff9800;
-}
-
-.address-default:hover {
-  background: rgba(255, 152, 0, 0.1);
-}
-
-.address-delete {
-  color: var(--profile-danger);
-}
-
-.address-delete:hover {
-  background: rgba(220, 53, 69, 0.1);
-}
-
 /* Modal */
-.address-form-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .modal-overlay {
   position: absolute;
   top: 0;
@@ -665,23 +405,6 @@
 .modal-header h3 {
   font-size: 1.25rem;
   color: var(--profile-text);
-}
-
-.close-modal {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  cursor: pointer;
-  color: var(--profile-text-light);
-  transition: var(--profile-transition);
-}
-
-.close-modal:hover {
-  color: var(--profile-danger);
-}
-
-.address-form {
-  padding: 1.5rem;
 }
 
 /* Delete Account */
@@ -883,21 +606,6 @@
     grid-template-columns: 1fr;
   }
   
-  .order-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .order-footer {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .address-actions {
-    flex-wrap: wrap;
-  }
-  
   .profile-toast {
     top: 1rem;
     right: 1rem;
@@ -909,29 +617,12 @@
 @media print {
   .profile-sidebar,
   .edit-btn,
-  .add-address-btn,
-  .address-actions,
   .avatar-upload-btn,
   .form-actions {
     display: none;
   }
 }
 
-
-/* Add to profile.css */
-
-/* Fix for address modal scrolling */
-.address-form-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .modal-overlay {
   position: fixed;
@@ -974,37 +665,10 @@
   color: #2d3748;
 }
 
-.close-modal {
-  background: none;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  color: #a0aec0;
-  transition: color 0.2s;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-}
-
-.close-modal:hover {
-  color: #4a5568;
-  background: #f7fafc;
-}
-
 .modal-body {
   padding: 24px;
   overflow-y: auto;
   flex: 1;
-}
-
-/* Make form scrollable */
-.address-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 /* Add styling for form rows */

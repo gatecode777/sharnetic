@@ -5,6 +5,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import BulkImportModal from '@/components/admin/BulkImportModal';
 import { sellerAPI, adminCategoryAPI } from '@/lib/api';
 import { downloadCSV, arrayToCSV, SELLER_TEMPLATE_CSV } from '@/lib/csvHelper';
+import { cleanName, cleanPhone, cleanEmail, nameError, phoneError, emailError, phoneInputProps, nameInputProps } from '@/lib/validation';
 
 const AdminSellers = () => {
   const [sellers, setSellers] = useState([]);
@@ -27,8 +28,8 @@ const AdminSellers = () => {
     contactPerson: '',
     email: '',
     phone: '',
-    city: 'Jaipur',
-    state: 'Rajasthan',
+    city: '',
+    state: '',
     address: '',
     businessType: 'Manufacturer & Wholesaler',
     yearEstablished: 2015,
@@ -76,14 +77,15 @@ const AdminSellers = () => {
 
   const handleOpenAdd = () => {
     setEditingSeller(null);
+    // Visible fields start empty; if City/State are left empty the server saves Jaipur / Rajasthan.
     setFormData({
       name: '',
-      mainCategory: categories[0]?._id || '',
+      mainCategory: '', // "Select Main Category"
       contactPerson: '',
       email: '',
       phone: '',
-      city: 'Jaipur',
-      state: 'Rajasthan',
+      city: '',
+      state: '',
       address: '',
       businessType: 'Manufacturer & Wholesaler',
       yearEstablished: 2015,
@@ -101,9 +103,9 @@ const AdminSellers = () => {
     setFormData({
       name: seller.name || '',
       mainCategory: seller.mainCategory?._id || seller.mainCategory || '',
-      contactPerson: seller.contactPerson || '',
+      contactPerson: cleanName(seller.contactPerson || ''),
       email: seller.email || '',
-      phone: seller.phone || '',
+      phone: cleanPhone(seller.phone || ''), // "+91 98290 44211" -> "9829044211" while editing
       city: seller.city || 'Jaipur',
       state: seller.state || 'Rajasthan',
       address: seller.address || '',
@@ -124,12 +126,26 @@ const AdminSellers = () => {
       alert('Seller Name and Main Category are required');
       return;
     }
+    const invalid =
+      nameError(formData.contactPerson, { label: 'Contact person', required: false }) ||
+      phoneError(formData.phone, { label: 'Phone / WhatsApp', required: false }) ||
+      emailError(formData.email, { required: false });
+    if (invalid) {
+      alert(invalid);
+      return;
+    }
+
+    // Store the phone in the same "+91 98290 44211" format as every other supplier.
+    const payload = {
+      ...formData,
+      phone: formData.phone ? `+91 ${formData.phone.slice(0, 5)} ${formData.phone.slice(5)}` : '',
+    };
 
     try {
       if (editingSeller) {
-        await sellerAPI.update(editingSeller._id, formData);
+        await sellerAPI.update(editingSeller._id, payload);
       } else {
-        await sellerAPI.create(formData);
+        await sellerAPI.create(payload);
       }
       setShowModal(false);
       fetchSellers();
@@ -499,17 +515,20 @@ const AdminSellers = () => {
                     <label className="block font-bold text-gray-700 uppercase mb-1">Contact Person</label>
                     <input
                       type="text"
+                      {...nameInputProps}
                       value={formData.contactPerson}
-                      onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, contactPerson: cleanName(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
                   </div>
                   <div>
                     <label className="block font-bold text-gray-700 uppercase mb-1">Phone / WhatsApp</label>
                     <input
-                      type="text"
+                      type="tel"
+                      {...phoneInputProps}
+                      placeholder="9876543210"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, phone: cleanPhone(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
                   </div>
@@ -521,7 +540,7 @@ const AdminSellers = () => {
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, email: cleanEmail(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     />
                   </div>
