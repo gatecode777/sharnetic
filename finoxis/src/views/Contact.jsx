@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { API_URL } from '@/lib/config';
+import { CONTACT_FAQS as faqs } from '@/lib/faqs';
 import { cleanName, cleanPhone, cleanEmail, nameError, phoneError, emailError, phoneInputProps, nameInputProps } from '@/lib/validation';
 
 const Contact = () => {
@@ -122,33 +123,6 @@ const Contact = () => {
             icon: 'fas fa-clock',
             title: 'Business Hours',
             details: ['Monday - Friday: 9:00 AM - 7:00 PM', 'Saturday: 10:00 AM - 5:00 PM', 'Sunday: Closed']
-        }
-    ];
-
-    const faqs = [
-        {
-            question: 'How can I track my order?',
-            answer: 'You can track your order by logging into your account and visiting the "My Orders" section. You\'ll also receive tracking updates via email and SMS.'
-        },
-        {
-            question: 'What is your return policy?',
-            answer: 'We offer a 10-day easy return policy on most products. Items must be unused and in original packaging. Some products may have specific return conditions.'
-        },
-        {
-            question: 'Do you offer international shipping?',
-            answer: 'Currently, we ship only within India. We are working on expanding our shipping network internationally.'
-        },
-        {
-            question: 'How long does delivery take?',
-            answer: 'Standard delivery takes 3-7 business days depending on your location. Metro cities usually receive delivery within 2-4 days.'
-        },
-        {
-            question: 'Is my payment information secure?',
-            answer: 'Yes, we use industry-standard SSL encryption and secure payment gateways to protect your payment information.'
-        },
-        {
-            question: 'Can I cancel my order?',
-            answer: 'Orders can be cancelled within 24 hours of placement or before shipment, whichever is earlier. You can cancel from your account or contact support.'
         }
     ];
 
