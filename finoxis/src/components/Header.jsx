@@ -165,74 +165,86 @@ const MainHeader = () => {
         <div className="border-t border-gray-200 bg-gray-50/80">
           <div className="container mx-auto px-6 py-3 max-w-7xl">
             <div className="flex flex-wrap items-center justify-between text-xs font-bold tracking-wide">
-              <div className="flex flex-wrap items-center space-x-8 py-1">
-                <Link
-                  href="/"
-                  className={`transition flex items-center ${
-                    pathname === '/'
-                      ? 'text-blue-700 font-extrabold'
-                      : 'text-gray-700 hover:text-blue-600 font-bold'
-                  }`}
-                >
-                  <i className={`fas fa-home mr-1.5 ${pathname === '/' ? 'text-blue-600' : 'text-gray-400'}`}></i> Home
-                </Link>
+              <nav aria-label="Main navigation">
+                <ul className="flex flex-wrap items-center space-x-8 py-1">
+                  <li>
+                    <Link
+                      href="/"
+                      className={`transition flex items-center ${
+                        pathname === '/'
+                          ? 'text-blue-700 font-extrabold'
+                          : 'text-gray-700 hover:text-blue-600 font-bold'
+                      }`}
+                    >
+                      <i className={`fas fa-home mr-1.5 ${pathname === '/' ? 'text-blue-600' : 'text-gray-400'}`}></i> Home
+                    </Link>
+                  </li>
 
-                <Link
-                  href="/shop"
-                  className={`transition flex items-center ${
-                    pathname.startsWith('/shop') || pathname.startsWith('/product')
-                      ? 'text-blue-700 font-extrabold'
-                      : 'text-gray-700 hover:text-blue-600 font-bold'
-                  }`}
-                >
-                  <i
-                    className={`fas fa-th-large mr-1.5 ${
-                      pathname.startsWith('/shop') || pathname.startsWith('/product')
-                        ? 'text-blue-600'
-                        : 'text-gray-400'
-                    }`}
-                  ></i>{' '}
-                  Products Directory
-                </Link>
+                  <li>
+                    <Link
+                      href="/shop"
+                      className={`transition flex items-center ${
+                        pathname.startsWith('/shop') || pathname.startsWith('/product')
+                          ? 'text-blue-700 font-extrabold'
+                          : 'text-gray-700 hover:text-blue-600 font-bold'
+                      }`}
+                    >
+                      <i
+                        className={`fas fa-th-large mr-1.5 ${
+                          pathname.startsWith('/shop') || pathname.startsWith('/product')
+                            ? 'text-blue-600'
+                            : 'text-gray-400'
+                        }`}
+                      ></i>{' '}
+                      Products Directory
+                    </Link>
+                  </li>
 
-                <Link
-                  href="/sellers"
-                  className={`transition flex items-center ${
-                    pathname.startsWith('/seller')
-                      ? 'text-blue-700 font-extrabold'
-                      : 'text-gray-700 hover:text-blue-600 font-bold'
-                  }`}
-                >
-                  <i
-                    className={`fas fa-industry mr-1.5 ${
-                      pathname.startsWith('/seller') ? 'text-blue-600' : 'text-gray-400'
-                    }`}
-                  ></i>{' '}
-                  Verified Suppliers
-                </Link>
+                  <li>
+                    <Link
+                      href="/sellers"
+                      className={`transition flex items-center ${
+                        pathname.startsWith('/seller')
+                          ? 'text-blue-700 font-extrabold'
+                          : 'text-gray-700 hover:text-blue-600 font-bold'
+                      }`}
+                    >
+                      <i
+                        className={`fas fa-industry mr-1.5 ${
+                          pathname.startsWith('/seller') ? 'text-blue-600' : 'text-gray-400'
+                        }`}
+                      ></i>{' '}
+                      Verified Suppliers
+                    </Link>
+                  </li>
 
-                <Link
-                  href="/about"
-                  className={`transition ${
-                    pathname.startsWith('/about')
-                      ? 'text-blue-700 font-extrabold'
-                      : 'text-gray-700 hover:text-blue-600 font-bold'
-                  }`}
-                >
-                  About Us
-                </Link>
+                  <li>
+                    <Link
+                      href="/about"
+                      className={`transition ${
+                        pathname.startsWith('/about')
+                          ? 'text-blue-700 font-extrabold'
+                          : 'text-gray-700 hover:text-blue-600 font-bold'
+                      }`}
+                    >
+                      About Us
+                    </Link>
+                  </li>
 
-                <Link
-                  href="/contact"
-                  className={`transition ${
-                    pathname.startsWith('/contact')
-                      ? 'text-blue-700 font-extrabold'
-                      : 'text-gray-700 hover:text-blue-600 font-bold'
-                  }`}
-                >
-                  Contact
-                </Link>
-              </div>
+                  <li>
+                    <Link
+                      href="/contact"
+                      className={`transition ${
+                        pathname.startsWith('/contact')
+                          ? 'text-blue-700 font-extrabold'
+                          : 'text-gray-700 hover:text-blue-600 font-bold'
+                      }`}
+                    >
+                      Contact
+                    </Link>
+                  </li>
+                </ul>
+              </nav>
               <div className="hidden lg:flex items-center text-gray-500 space-x-6">
                 <span className="flex items-center">
                   <i className="fas fa-check-double text-green-600 mr-1.5"></i> Verified Trade Leads

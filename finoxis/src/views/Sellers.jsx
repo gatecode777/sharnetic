@@ -1,32 +1,42 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { sellerAPI, adminCategoryAPI } from '@/lib/api';
 import EnquiryModal from '@/components/EnquiryModal';
+import { sellerPath } from '@/lib/routes';
 
-const SellersPage = () => {
+const toPage = (value) => {
+  const n = parseInt(value, 10);
+  return n > 0 ? n : 1;
+};
+
+// initial* props come from the server for the URL being opened (same API data),
+// so the first HTML already contains the suppliers of that page.
+const SellersPage = ({ initialFilters, initialData, initialCategories }) => {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
 
-  const [sellers, setSellers] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [sellers, setSellers] = useState(initialData?.sellers || []);
+  const [categories, setCategories] = useState(initialCategories || []);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState('');
-  
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalSellers, setTotalSellers] = useState(0);
+
+  const [selectedCategory, setSelectedCategory] = useState(initialFilters?.category || '');
+  const [selectedCity, setSelectedCity] = useState(initialFilters?.city || '');
+  const [search, setSearch] = useState(initialFilters?.search || '');
+  const [page, setPage] = useState(initialFilters?.page || 1);
+  const [totalPages, setTotalPages] = useState(initialData?.totalPages || 1);
+  const [totalSellers, setTotalSellers] = useState(initialData?.totalSellers || 0);
 
   // Enquiry modal
   const [enquirySeller, setEnquirySeller] = useState(null);
   const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
 
   useEffect(() => {
+    if (initialCategories) return; // already rendered by the server
     const fetchCats = async () => {
       try {
         const res = await adminCategoryAPI.getAll({ isActive: true });
@@ -38,6 +48,7 @@ const SellersPage = () => {
       }
     };
     fetchCats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -46,6 +57,8 @@ const SellersPage = () => {
     const city = params.get('city');
     if (cat) setSelectedCategory(cat);
     if (city) setSelectedCity(city);
+    // Follows the URL, so the browser Back button returns to the previous page of suppliers.
+    setPage(toPage(params.get('page')));
   }, [queryString]);
 
   const fetchSellers = useCallback(async () => {
@@ -74,9 +87,43 @@ const SellersPage = () => {
     }
   }, [page, selectedCategory, selectedCity, search]);
 
+  // Fetch whenever the filters change. The server already loaded the suppliers for the
+  // filters the page opened with, so that first request is skipped.
+  const fetchKey = JSON.stringify([page, selectedCategory, selectedCity, search]);
+  const lastFetchKey = useRef(initialData ? fetchKey : null);
+
   useEffect(() => {
+    if (lastFetchKey.current === fetchKey) return;
+    lastFetchKey.current = fetchKey;
     fetchSellers();
-  }, [fetchSellers]);
+  }, [fetchSellers, fetchKey]);
+
+  // Crawlable pagination URL for the current filters, e.g. /sellers?city=Jaipur&page=3
+  const buildHref = (overrides = {}) => {
+    const values = { category: selectedCategory, city: selectedCity, page, ...overrides };
+    const qs = new URLSearchParams();
+    if (values.category) qs.set('category', values.category);
+    if (values.city) qs.set('city', values.city);
+    if (values.page > 1) qs.set('page', String(values.page));
+    const s = qs.toString();
+    return s ? `${pathname}?${s}` : pathname;
+  };
+
+  // Same in-place page change + scroll as before (no reload), but the address bar now shows ?page=N.
+  // Ctrl/Cmd/middle-click still open the page in a new tab like any normal link.
+  const goToPage = (e, target) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    setPage(target);
+    if (target !== page) window.history.pushState(null, '', buildHref({ page: target }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // When a filter changes, keep an existing ?page=/filter URL in step (back to page 1).
+  const syncUrlAfterFilter = (overrides) => {
+    if (!window.location.search) return;
+    window.history.replaceState(null, '', buildHref({ ...overrides, page: 1 }));
+  };
 
   const handleOpenEnquiry = (seller) => {
     setEnquirySeller(seller);
@@ -128,7 +175,7 @@ const SellersPage = () => {
               </label>
               <select
                 value={selectedCategory}
-                onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
+                onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); syncUrlAfterFilter({ category: e.target.value }); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="">All Main Categories</option>
@@ -147,7 +194,7 @@ const SellersPage = () => {
               </label>
               <select
                 value={selectedCity}
-                onChange={(e) => { setSelectedCity(e.target.value); setPage(1); }}
+                onChange={(e) => { setSelectedCity(e.target.value); setPage(1); syncUrlAfterFilter({ city: e.target.value }); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="">All Indian Cities</option>
@@ -205,7 +252,7 @@ const SellersPage = () => {
                     )}
                   </div>
 
-                  <Link href={`/seller/${seller.slug || seller._id}`}>
+                  <Link href={sellerPath(seller)}>
                     <h3 className="text-lg font-bold text-gray-900 hover:text-blue-600 transition mb-1 leading-snug">
                       {seller.name}
                     </h3>
@@ -250,7 +297,7 @@ const SellersPage = () => {
                     <span>Send Enquiry</span>
                   </button>
                   <Link
-                    href={`/seller/${seller.slug || seller._id}`}
+                    href={sellerPath(seller)}
                     className="px-4 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 transition"
                   >
                     View Catalog
@@ -269,18 +316,25 @@ const SellersPage = () => {
             </span>
 
             <div className="flex items-center space-x-1.5">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className={`px-3 py-1.5 rounded-lg font-bold border transition ${
-                  page <= 1
-                    ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm'
-                }`}
-              >
-                <i className="fas fa-chevron-left mr-1"></i> Prev
-              </button>
+              {/* Real <a href> links so Google can follow every page; disabled state unchanged. */}
+              {page <= 1 ? (
+                <button
+                  type="button"
+                  disabled
+                  className="px-3 py-1.5 rounded-lg font-bold border transition border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50"
+                >
+                  <i className="fas fa-chevron-left mr-1"></i> Prev
+                </button>
+              ) : (
+                <a
+                  href={buildHref({ page: page - 1 })}
+                  rel="prev"
+                  onClick={(e) => goToPage(e, page - 1)}
+                  className="px-3 py-1.5 rounded-lg font-bold border transition border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm"
+                >
+                  <i className="fas fa-chevron-left mr-1"></i> Prev
+                </a>
+              )}
 
               {(() => {
                 const pages = [];
@@ -293,61 +347,71 @@ const SellersPage = () => {
 
                 if (start > 1) {
                   pages.push(
-                    <button
+                    <a
                       key={1}
-                      onClick={() => { setPage(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      className="w-8 h-8 rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                      href={buildHref({ page: 1 })}
+                      onClick={(e) => goToPage(e, 1)}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
                     >
                       1
-                    </button>
+                    </a>
                   );
                   if (start > 2) pages.push(<span key="dots-start" className="px-1 text-gray-400">...</span>);
                 }
 
                 for (let p = start; p <= end; p++) {
                   pages.push(
-                    <button
+                    <a
                       key={p}
-                      onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      className={`w-8 h-8 rounded-lg font-bold transition ${
+                      href={buildHref({ page: p })}
+                      aria-current={page === p ? 'page' : undefined}
+                      onClick={(e) => goToPage(e, p)}
+                      className={`w-8 h-8 inline-flex items-center justify-center rounded-lg font-bold transition ${
                         page === p
                           ? 'bg-blue-600 text-white shadow-sm'
                           : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
                       }`}
                     >
                       {p}
-                    </button>
+                    </a>
                   );
                 }
 
                 if (end < totalPages) {
                   if (end < totalPages - 1) pages.push(<span key="dots-end" className="px-1 text-gray-400">...</span>);
                   pages.push(
-                    <button
+                    <a
                       key={totalPages}
-                      onClick={() => { setPage(totalPages); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      className="w-8 h-8 rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                      href={buildHref({ page: totalPages })}
+                      onClick={(e) => goToPage(e, totalPages)}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg font-bold border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
                     >
                       {totalPages}
-                    </button>
+                    </a>
                   );
                 }
 
                 return pages;
               })()}
 
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className={`px-3 py-1.5 rounded-lg font-bold border transition ${
-                  page >= totalPages
-                    ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm'
-                }`}
-              >
-                Next <i className="fas fa-chevron-right ml-1"></i>
-              </button>
+              {page >= totalPages ? (
+                <button
+                  type="button"
+                  disabled
+                  className="px-3 py-1.5 rounded-lg font-bold border transition border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50"
+                >
+                  Next <i className="fas fa-chevron-right ml-1"></i>
+                </button>
+              ) : (
+                <a
+                  href={buildHref({ page: page + 1 })}
+                  rel="next"
+                  onClick={(e) => goToPage(e, page + 1)}
+                  className="px-3 py-1.5 rounded-lg font-bold border transition border-gray-300 text-gray-700 hover:bg-gray-100 bg-white shadow-sm"
+                >
+                  Next <i className="fas fa-chevron-right ml-1"></i>
+                </a>
+              )}
             </div>
           </div>
         )}

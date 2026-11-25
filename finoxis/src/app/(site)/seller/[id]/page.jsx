@@ -1,11 +1,7 @@
-import SellerDetailPage from '@/views/SellerDetail';
-import { sellerMetadata } from '@/server/seo';
+import { permanentRedirect } from 'next/navigation';
 
-export async function generateMetadata({ params }) {
+// Old supplier URL. Suppliers now live at /sellers/<supplier-slug>.
+export default async function Page({ params }) {
   const { id } = await params;
-  return sellerMetadata(id);
-}
-
-export default function Page() {
-  return <SellerDetailPage />;
+  permanentRedirect(`/sellers/${encodeURIComponent(id)}`);
 }

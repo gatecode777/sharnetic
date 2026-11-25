@@ -1,35 +1,43 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { productAPI, adminCategoryAPI, sellerAPI } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import EnquiryModal from '@/components/EnquiryModal';
 
-const ProductsPage = () => {
+const toPage = (value) => {
+    const n = parseInt(value, 10);
+    return n > 0 ? n : 1;
+};
+
+// initial* props come from the server for the URL being opened (same API data),
+// so the first HTML already contains the products of that page.
+const ProductsPage = ({ initialFilters, initialData, initialCategories, initialSellers }) => {
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const queryString = searchParams.toString();
 
     // State Management
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [products, setProducts] = useState(initialData?.products || []);
+    const [loading, setLoading] = useState(!initialData);
     const [error, setError] = useState('');
-    const [totalProducts, setTotalProducts] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
+    const [totalProducts, setTotalProducts] = useState(initialData?.totalProducts || 0);
+    const [totalPages, setTotalPages] = useState(initialData?.totalPages || 1);
 
     // Filter States
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedSeller, setSelectedSeller] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState(initialFilters?.category || '');
+    const [selectedSeller, setSelectedSeller] = useState(initialFilters?.seller || '');
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState('desc');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState(initialFilters?.search || '');
+    const [currentPage, setCurrentPage] = useState(initialFilters?.page || 1);
     const itemsPerPage = 12;
 
     // Categories & Sellers from API
-    const [categories, setCategories] = useState([]);
-    const [sellers, setSellers] = useState([]);
+    const [categories, setCategories] = useState(initialCategories || []);
+    const [sellers, setSellers] = useState(initialSellers || []);
 
     // Modal state
     const [enquiryProduct, setEnquiryProduct] = useState(null);
@@ -37,6 +45,7 @@ const ProductsPage = () => {
 
     // Fetch Categories & Sellers
     useEffect(() => {
+        if (initialCategories && initialSellers) return; // already rendered by the server
         const fetchFilters = async () => {
             try {
                 const [catRes, sellerRes] = await Promise.all([
@@ -54,9 +63,10 @@ const ProductsPage = () => {
             }
         };
         fetchFilters();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Parse URL params on mount
+    // Parse the URL: category from the path (/shop/<category-slug>), the rest from the query.
     useEffect(() => {
         const params = new URLSearchParams(queryString);
         const categoryParam = params.get('category');
@@ -64,11 +74,20 @@ const ProductsPage = () => {
         const searchParam = params.get('search');
         const pageParam = params.get('page');
 
-        if (categoryParam) setSelectedCategory(categoryParam);
+        const pathMatch = pathname.match(/^\/shop\/([^/]+)\/?$/);
+        if (pathMatch) {
+            const slug = decodeURIComponent(pathMatch[1]);
+            const cat = categories.find((c) => c.slug === slug);
+            if (cat) setSelectedCategory(cat._id);
+        } else if (pathname === '/shop') {
+            // Plain /shop = all categories (e.g. after pressing Back from a category).
+            setSelectedCategory(categoryParam || '');
+        }
         if (sellerParam) setSelectedSeller(sellerParam);
         if (searchParam) setSearchTerm(searchParam);
-        if (pageParam) setCurrentPage(parseInt(pageParam));
-    }, [queryString]);
+        // Follows the URL, so the browser Back button returns to the previous page of results.
+        setCurrentPage(toPage(pageParam));
+    }, [queryString, pathname, categories]);
 
     // Fetch Products with filters
     const fetchProducts = useCallback(async () => {
@@ -104,18 +123,66 @@ const ProductsPage = () => {
         }
     }, [currentPage, selectedCategory, selectedSeller, searchTerm, sortBy, sortOrder]);
 
+    // Fetch whenever the filters change. The server already loaded the products for the
+    // filters the page opened with, so that first request is skipped.
+    const fetchKey = JSON.stringify([currentPage, selectedCategory, selectedSeller, searchTerm, sortBy, sortOrder]);
+    const lastFetchKey = useRef(initialData ? fetchKey : null);
+
     useEffect(() => {
+        if (lastFetchKey.current === fetchKey) return;
+        lastFetchKey.current = fetchKey;
         fetchProducts();
-    }, [fetchProducts]);
+    }, [fetchProducts, fetchKey]);
+
+    // Crawlable URL for the current filters, e.g. /shop/clothing?page=3
+    const buildHref = (overrides = {}) => {
+        const values = {
+            category: selectedCategory,
+            seller: selectedSeller,
+            search: searchTerm.trim() ? searchTerm : '',
+            page: currentPage,
+            ...overrides,
+        };
+        const qs = new URLSearchParams();
+        const slug = values.category ? categories.find((c) => c._id === values.category)?.slug : '';
+        const base = slug ? `/shop/${slug}` : '/shop';
+        if (values.category && !slug) qs.set('category', values.category); // category list not loaded
+        if (values.seller) qs.set('seller', values.seller);
+        if (values.search) qs.set('search', values.search);
+        if (values.page > 1) qs.set('page', String(values.page));
+        const s = qs.toString();
+        return s ? `${base}?${s}` : base;
+    };
+
+    // Same in-place page change as before (no reload), but the address bar now shows ?page=N.
+    // Ctrl/Cmd/middle-click still open the page in a new tab like any normal link.
+    const goToPage = (e, page) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        setCurrentPage(page);
+        if (page !== currentPage) window.history.pushState(null, '', buildHref({ page }));
+    };
+
+    // When a filter changes, keep an existing ?page=/filter URL in step (back to page 1).
+    const syncUrlAfterFilter = (overrides) => {
+        if (!window.location.search) return;
+        window.history.replaceState(null, '', buildHref({ ...overrides, page: 1 }));
+    };
 
     const handleCategoryChange = (catId) => {
-        setSelectedCategory(catId === selectedCategory ? '' : catId);
+        const next = catId === selectedCategory ? '' : catId;
+        setSelectedCategory(next);
         setCurrentPage(1);
+        // Same in-place filter as before; the address bar now shows /shop/<category-slug>.
+        const href = buildHref({ category: next, page: 1 });
+        if (href !== window.location.pathname + window.location.search) window.history.pushState(null, '', href);
     };
 
     const handleSellerChange = (sellerId) => {
-        setSelectedSeller(sellerId === selectedSeller ? '' : sellerId);
+        const next = sellerId === selectedSeller ? '' : sellerId;
+        setSelectedSeller(next);
         setCurrentPage(1);
+        syncUrlAfterFilter({ seller: next });
     };
 
     const clearAllFilters = () => {
@@ -356,25 +423,46 @@ const ProductsPage = () => {
                         {/* Pagination */}
                         {totalPages > 1 && (
                             <div className="flex justify-center items-center space-x-2 mt-10">
-                                <button
-                                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-gray-100 transition"
-                                >
-                                    <i className="fas fa-chevron-left mr-1"></i> Prev
-                                </button>
+                                {/* Real <a href> links so Google can follow every page; disabled state unchanged. */}
+                                {currentPage <= 1 ? (
+                                    <button
+                                        disabled
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-gray-100 transition"
+                                    >
+                                        <i className="fas fa-chevron-left mr-1"></i> Prev
+                                    </button>
+                                ) : (
+                                    <a
+                                        href={buildHref({ page: currentPage - 1 })}
+                                        rel="prev"
+                                        onClick={(e) => goToPage(e, currentPage - 1)}
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-gray-100 transition"
+                                    >
+                                        <i className="fas fa-chevron-left mr-1"></i> Prev
+                                    </a>
+                                )}
 
                                 <span className="text-xs font-semibold px-4 text-gray-700">
                                     {currentPage} / {totalPages}
                                 </span>
 
-                                <button
-                                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-gray-100 transition"
-                                >
-                                    Next <i className="fas fa-chevron-right ml-1"></i>
-                                </button>
+                                {currentPage >= totalPages ? (
+                                    <button
+                                        disabled
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-gray-100 transition"
+                                    >
+                                        Next <i className="fas fa-chevron-right ml-1"></i>
+                                    </button>
+                                ) : (
+                                    <a
+                                        href={buildHref({ page: currentPage + 1 })}
+                                        rel="next"
+                                        onClick={(e) => goToPage(e, currentPage + 1)}
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-gray-100 transition"
+                                    >
+                                        Next <i className="fas fa-chevron-right ml-1"></i>
+                                    </a>
+                                )}
                             </div>
                         )}
                     </div>
