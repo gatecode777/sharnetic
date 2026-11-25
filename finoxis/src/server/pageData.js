@@ -1,5 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import connectDB from './db';
 import Product from './models/Product';
 import { getAllProducts, getProductBySlug } from './controllers/publicProductController';
@@ -65,32 +66,40 @@ const toPage = (value) => {
 
 const first = (value) => (Array.isArray(value) ? value[0] : value) || '';
 
-/**
- * Active categories (same call the Home/Shop/Sellers pages make).
- * The list costs 1 + (number of categories) database queries (a product count per category),
- * so it is kept in memory for 5 minutes instead of being rebuilt on every page view.
- * Failures are not cached.
+/*
+ * Shared data cache (Next.js Data Cache). On Vercel it is shared by every server instance and
+ * survives cold starts, so a category click usually needs no database round-trip at all.
+ * Failures throw inside the cached function, so a failed lookup is never cached.
  */
-const CATEGORY_TTL_MS = 5 * 60 * 1000;
-const categoryCache = globalThis.__finoxisCategoryCache || (globalThis.__finoxisCategoryCache = { at: 0, value: null, pending: null });
+async function runOrThrow(controller, query) {
+  const data = okData(await runController(controller, { query }));
+  if (!data) throw new Error('pageData: database request failed');
+  return data;
+}
 
+// Same query in any key order / value type -> same cache entry.
+const cacheKey = (query = {}) =>
+  Object.keys(query)
+    .filter((k) => query[k] !== undefined && query[k] !== null && query[k] !== '')
+    .sort()
+    .reduce((acc, k) => ({ ...acc, [k]: String(query[k]) }), {});
+
+const cachedCategories = unstable_cache(
+  async () => (await runOrThrow(getAllCategories, { isActive: 'true' })).categories || [],
+  ['finoxis-active-categories'],
+  { revalidate: 300 } // 1 + (number of categories) queries -> at most once every 5 minutes
+);
+const cachedProducts = unstable_cache((query) => runOrThrow(getAllProducts, query), ['finoxis-products'], { revalidate: 60 });
+const cachedSellers = unstable_cache((query) => runOrThrow(getAllSellers, query), ['finoxis-sellers'], { revalidate: 60 });
+
+/** Active categories (same call the Home/Shop/Sellers pages make). */
 export const getActiveCategories = cache(async () => {
-  if (categoryCache.value && Date.now() - categoryCache.at < CATEGORY_TTL_MS) return categoryCache.value;
-  if (!categoryCache.pending) {
-    categoryCache.pending = runController(getAllCategories, { query: { isActive: 'true' } })
-      .then((result) => {
-        const data = okData(result);
-        if (data) {
-          categoryCache.value = data.categories || [];
-          categoryCache.at = Date.now();
-        }
-        return data ? data.categories || [] : categoryCache.value; // on failure, fall back to the last good list
-      })
-      .finally(() => {
-        categoryCache.pending = null;
-      });
+  try {
+    return await cachedCategories();
+  } catch (err) {
+    console.error('getActiveCategories error:', err.message);
+    return null;
   }
-  return categoryCache.pending;
 });
 
 /** Active category by its URL slug (or, for old links, by its id). */
@@ -100,12 +109,24 @@ export const getCategoryBySlugOrId = cache(async (value) => {
   return categories.find((c) => c.slug === value) || categories.find((c) => c._id === value) || null;
 });
 
+/** Product list (cached 60s per filter/page combination). */
 export async function getProducts(query) {
-  return okData(await runController(getAllProducts, { query }));
+  try {
+    return await cachedProducts(cacheKey(query));
+  } catch (err) {
+    console.error('getProducts error:', err.message);
+    return null;
+  }
 }
 
+/** Supplier list (cached 60s per filter/page combination). */
 export async function getSellers(query) {
-  return okData(await runController(getAllSellers, { query }));
+  try {
+    return await cachedSellers(cacheKey(query));
+  } catch (err) {
+    console.error('getSellers error:', err.message);
+    return null;
+  }
 }
 
 /** Homepage: same three requests Home.jsx makes. */
@@ -137,7 +158,7 @@ export async function getShopData(filters) {
   const [products, categories] = await Promise.all([
     getProducts({
       page: filters.page,
-      limit: 12,
+      limit: 10, // products per page (must match itemsPerPage in views/Shop.jsx)
       sort: 'createdAt',
       order: 'desc',
       category: filters.category,

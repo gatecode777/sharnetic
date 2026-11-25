@@ -33,7 +33,7 @@ const ProductsPage = ({ initialFilters, initialData, initialCategories }) => {
     const [sortOrder, setSortOrder] = useState('desc');
     const [searchTerm, setSearchTerm] = useState(initialFilters?.search || '');
     const [currentPage, setCurrentPage] = useState(initialFilters?.page || 1);
-    const itemsPerPage = 12;
+    const itemsPerPage = 10; // must match limit in getShopData (server/pageData.js)
 
     // Categories from API
     const [categories, setCategories] = useState(initialCategories || []);

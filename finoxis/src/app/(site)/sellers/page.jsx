@@ -3,7 +3,7 @@ import SellersPage from '@/views/Sellers';
 import { getSellersPageData, readSellerFilters } from '@/server/pageData';
 import { buildQuery } from '@/server/seo';
 
-export const dynamic = 'force-dynamic';
+// Rendered per request (reads ?page= etc.); data comes from the shared data cache in server/pageData.js.
 
 export async function generateMetadata({ searchParams }) {
   const filters = readSellerFilters(await searchParams);

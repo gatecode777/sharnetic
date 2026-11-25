@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatImageUrl } from '@/lib/imageHelper';
 import { productPath } from '@/lib/routes';
@@ -44,6 +44,15 @@ const ProductCard = ({ product, onEnquiry }) => {
   const imageUrl = product ? formatImageUrl(product.images?.[0]) : '';
   useImageTimeoutFallback(imgRef, imageUrl);
 
+  // Grey shimmer in the photo box until the photo (or the default picture) has arrived,
+  // so a slow photo server never looks like a missing product.
+  const [imgReady, setImgReady] = useState(false);
+  useEffect(() => {
+    // The photo may have finished before React attached onLoad (server-rendered page).
+    const img = imgRef.current;
+    setImgReady(!!(img && img.complete && img.naturalWidth > 0));
+  }, [imageUrl]);
+
   if (!product) return null;
 
   const seller = product.seller || {};
@@ -61,7 +70,8 @@ const ProductCard = ({ product, onEnquiry }) => {
       <div>
         {/* Product Image */}
         <div className="relative overflow-hidden bg-gray-50 h-52">
-          <Link href={productPath(product)} className="block h-full w-full">
+          {!imgReady && <div className="absolute inset-0 bg-gray-200 animate-pulse" aria-hidden="true" />}
+          <Link href={productPath(product)} className="relative block h-full w-full">
             {/* lazy: product photos come from third-party hosts that can hang; this lets the
                 page's own scripts load first so the page is clickable immediately. */}
             <img
@@ -71,6 +81,7 @@ const ProductCard = ({ product, onEnquiry }) => {
               loading="lazy"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onLoad={() => setImgReady(true)}
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.src = FALLBACK_IMAGE;
