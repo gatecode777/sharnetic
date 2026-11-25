@@ -4,7 +4,7 @@ import { getCategoryBySlugOrId } from '@/server/pageData';
 import { buildQuery } from '@/server/seo';
 import { categoryPath } from '@/lib/routes';
 
-export const dynamic = 'force-dynamic';
+// Rendered per request (reads ?page= etc.); data comes from the shared data cache in server/pageData.js.
 
 // /shop/<category-slug>  — the same Products Directory page, filtered to one category.
 
