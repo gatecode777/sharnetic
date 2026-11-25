@@ -65,10 +65,32 @@ const toPage = (value) => {
 
 const first = (value) => (Array.isArray(value) ? value[0] : value) || '';
 
-/** Active categories (same call the Home/Shop/Sellers pages make). */
+/**
+ * Active categories (same call the Home/Shop/Sellers pages make).
+ * The list costs 1 + (number of categories) database queries (a product count per category),
+ * so it is kept in memory for 5 minutes instead of being rebuilt on every page view.
+ * Failures are not cached.
+ */
+const CATEGORY_TTL_MS = 5 * 60 * 1000;
+const categoryCache = globalThis.__finoxisCategoryCache || (globalThis.__finoxisCategoryCache = { at: 0, value: null, pending: null });
+
 export const getActiveCategories = cache(async () => {
-  const data = okData(await runController(getAllCategories, { query: { isActive: 'true' } }));
-  return data ? data.categories || [] : null;
+  if (categoryCache.value && Date.now() - categoryCache.at < CATEGORY_TTL_MS) return categoryCache.value;
+  if (!categoryCache.pending) {
+    categoryCache.pending = runController(getAllCategories, { query: { isActive: 'true' } })
+      .then((result) => {
+        const data = okData(result);
+        if (data) {
+          categoryCache.value = data.categories || [];
+          categoryCache.at = Date.now();
+        }
+        return data ? data.categories || [] : categoryCache.value; // on failure, fall back to the last good list
+      })
+      .finally(() => {
+        categoryCache.pending = null;
+      });
+  }
+  return categoryCache.pending;
 });
 
 /** Active category by its URL slug (or, for old links, by its id). */
@@ -110,9 +132,9 @@ export function readShopFilters(searchParams = {}) {
   };
 }
 
-/** /shop: product list + sidebar filter lists, same requests Shop.jsx makes. */
+/** /shop: product list + sidebar category list, same requests Shop.jsx makes. */
 export async function getShopData(filters) {
-  const [products, categories, sellers] = await Promise.all([
+  const [products, categories] = await Promise.all([
     getProducts({
       page: filters.page,
       limit: 12,
@@ -123,7 +145,6 @@ export async function getShopData(filters) {
       search: filters.search.trim(),
     }),
     getActiveCategories(),
-    getSellers({ limit: 50 }),
   ]);
   return {
     products: products
@@ -134,7 +155,6 @@ export async function getShopData(filters) {
         }
       : null,
     categories,
-    sellers: sellers ? sellers.sellers || [] : null,
   };
 }
 

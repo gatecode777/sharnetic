@@ -164,7 +164,8 @@ const MainHeader = () => {
         {/* Navigation Menu with Spacious Row & Padding */}
         <div className="border-t border-gray-200 bg-gray-50/80">
           <div className="container mx-auto px-6 py-3 max-w-7xl">
-            <div className="flex flex-wrap items-center justify-between text-xs font-bold tracking-wide">
+            {/* Vertical padding lives here: a global `.container { padding: 0 24px }` rule cancels py-* on the container. */}
+            <div className="flex flex-wrap items-center justify-between text-sm font-bold tracking-wide py-3">
               <nav aria-label="Main navigation">
                 <ul className="flex flex-wrap items-center space-x-8 py-1">
                   <li>
@@ -264,7 +265,6 @@ const MainHeader = () => {
         onClose={() => setIsRequirementModalOpen(false)}
         product={null}
         seller={null}
-        initialMessage="I am looking for bulk products/materials. Please connect me with verified suppliers."
       />
     </>
   );

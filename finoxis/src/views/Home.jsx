@@ -8,6 +8,7 @@ import ProductCard from '@/components/ProductCard';
 import EnquiryModal from '@/components/EnquiryModal';
 import { BASE_URL } from '@/lib/config';
 import { categoryPath, sellerPath } from '@/lib/routes';
+import { cleanPhone, isValidPhone, phoneInputProps } from '@/lib/validation';
 
 const IMAGE_URL = BASE_URL;
 
@@ -118,9 +119,7 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
 
     // Mobile number: digits only, exactly 10. A pasted "+91 98765 43210" keeps the last 10 digits.
     const handleHeroPhoneChange = (e) => {
-        let digits = e.target.value.replace(/\D/g, '');
-        if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(digits.length - 10);
-        setHeroPhone(digits.slice(0, 10));
+        setHeroPhone(cleanPhone(e.target.value));
         if (heroErrors.phone) setHeroErrors((prev) => ({ ...prev, phone: '' }));
     };
 
@@ -128,7 +127,7 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
         e.preventDefault();
         const errors = {
             requirement: heroRequirement.trim() ? '' : 'Please enter a product or service name.',
-            phone: /^\d{10}$/.test(heroPhone) ? '' : 'Please enter a valid 10-digit mobile number.',
+            phone: isValidPhone(heroPhone) ? '' : 'Please enter a valid 10-digit mobile number.',
         };
         setHeroErrors(errors);
         if (errors.requirement || errors.phone) return;
@@ -219,10 +218,7 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
                                             placeholder="Enter 10-digit mobile number"
                                             value={heroPhone}
                                             onChange={handleHeroPhoneChange}
-                                            inputMode="numeric"
-                                            pattern="[0-9]{10}"
-                                            maxLength={10}
-                                            autoComplete="tel-national"
+                                            {...phoneInputProps}
                                             aria-invalid={!!heroErrors.phone}
                                             className={`w-full px-3.5 py-2.5 border rounded-r-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${heroErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
                                             required
@@ -286,6 +282,8 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
                                             <img
                                                 src={getCategoryImage(category)}
                                                 alt={category.name}
+                                                loading="lazy"
+                                                decoding="async"
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => { 
                                                     e.target.onerror = null; 
@@ -498,11 +496,9 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
                 onClose={() => setIsEnquiryOpen(false)}
                 product={selectedProduct}
                 seller={selectedSeller}
-                initialMessage={
-                    heroRequirement
-                        ? `Requirement: ${heroRequirement}. Please contact me at ${heroPhone || 'my phone'} with wholesale quotation.`
-                        : ''
-                }
+                // Only what the visitor typed in the homepage form — no extra text added.
+                initialMessage={heroRequirement}
+                initialPhone={heroPhone}
             />
         </main>
     );

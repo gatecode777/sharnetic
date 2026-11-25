@@ -3,8 +3,9 @@ import JsonLd from '@/components/JsonLd';
 import { getHomeData } from '@/server/pageData';
 import { organizationJsonLd, websiteJsonLd } from '@/lib/site';
 
-// Always fresh, exactly like the client-side fetch it replaces.
-export const dynamic = 'force-dynamic';
+// Served ready-made from cache and refreshed in the background at most once a minute,
+// so a click on "Home" never waits for the database.
+export const revalidate = 60;
 
 export const metadata = { alternates: { canonical: '/' } };
 

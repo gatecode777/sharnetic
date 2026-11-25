@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { orderAPI, addressAPI } from '@/lib/api';
 import { API_URL } from '@/lib/config';
+import { cleanName, cleanPhone, nameError, phoneError, phoneInputProps, NAME_MAX_LENGTH } from '@/lib/validation';
 
 // Define URLs correctly
 const IMAGE_URL = API_URL.replace('/api', ''); // For static files: http://localhost:5000
@@ -30,27 +30,6 @@ const ProfilePage = () => {
   const [imagePreview, setImagePreview] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  
-  // Orders State
-  const [orders, setOrders] = useState([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  
-  // Addresses State
-  const [addresses, setAddresses] = useState([]);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [editingAddress, setEditingAddress] = useState(null);
-  const [addressForm, setAddressForm] = useState({
-    label: 'Home',
-    fullName: '',
-    phone: '',
-    line1: '',
-    line2: '',
-    city: '',
-    state: '',
-    pincode: '',
-    country: 'India',
-    isDefault: false
-  });
   
   // Password Change State
   const [passwordData, setPasswordData] = useState({
@@ -79,10 +58,10 @@ const ProfilePage = () => {
   useEffect(() => {
     if (user) {
       setProfileData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
+        firstName: cleanName(user.firstName || ''),
+        lastName: cleanName(user.lastName || ''),
         email: user.email || '',
-        phone: user.phone || '',
+        phone: cleanPhone(user.phone || ''),
         profile: user.profile || ''
       });
       
@@ -92,20 +71,6 @@ const ProfilePage = () => {
       setProfileImage(user.profile || '/default-user.jpg');
     }
   }, [user]);
-
-  // Load orders
-  useEffect(() => {
-    if (activeTab === 'orders') {
-      fetchOrders();
-    }
-  }, [activeTab]);
-
-  // Load addresses
-  useEffect(() => {
-    if (activeTab === 'addresses') {
-      fetchAddresses();
-    }
-  }, [activeTab]);
 
   // Show message helper
   const showToastMessage = (type, text) => {
@@ -117,6 +82,14 @@ const ProfilePage = () => {
   // ==================== PROFILE FUNCTIONS ====================
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
+    const invalid =
+      nameError(profileData.firstName, { label: 'First name' }) ||
+      nameError(profileData.lastName, { label: 'Last name' }) ||
+      phoneError(profileData.phone, { label: 'Phone number', required: false });
+    if (invalid) {
+      showToastMessage('error', invalid);
+      return;
+    }
     setLoading(true);
     
     try {
@@ -195,111 +168,6 @@ const ProfilePage = () => {
     } finally {
       setUploadingImage(false);
     }
-  };
-
-  // ==================== ORDERS FUNCTIONS ====================
-  const fetchOrders = async () => {
-    setOrdersLoading(true);
-    try {
-      const response = await orderAPI.getMyOrders();
-      setOrders(response.data.orders || []);
-    } catch (error) {
-      showToastMessage('error', 'Failed to load orders');
-    } finally {
-      setOrdersLoading(false);
-    }
-  };
-
-  // ==================== ADDRESS FUNCTIONS ====================
-  const fetchAddresses = async () => {
-    try {
-      const response = await addressAPI.getAll();
-      setAddresses(response.data.addresses || []);
-    } catch (error) {
-      showToastMessage('error', 'Failed to load addresses');
-    }
-  };
-
-  const handleAddressSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      let response;
-      if (editingAddress) {
-        response = await addressAPI.update(editingAddress._id, addressForm);
-      } else {
-        response = await addressAPI.create(addressForm);
-      }
-      
-      if (response.data.success) {
-        showToastMessage('success', editingAddress ? 'Address updated' : 'Address added');
-        setShowAddressForm(false);
-        setEditingAddress(null);
-        setAddressForm({
-          label: 'Home',
-          fullName: '',
-          phone: '',
-          line1: '',
-          line2: '',
-          city: '',
-          state: '',
-          pincode: '',
-          country: 'India',
-          isDefault: false
-        });
-        fetchAddresses();
-      }
-    } catch (error) {
-      showToastMessage('error', error.response?.data?.message || 'Failed to save address');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm('Are you sure you want to delete this address?')) return;
-    
-    try {
-      const response = await addressAPI.delete(addressId);
-      
-      if (response.data.success) {
-        showToastMessage('success', 'Address deleted');
-        fetchAddresses();
-      }
-    } catch (error) {
-      showToastMessage('error', 'Failed to delete address');
-    }
-  };
-
-  const handleSetDefaultAddress = async (addressId) => {
-    try {
-      const response = await addressAPI.setDefault(addressId);
-      
-      if (response.data.success) {
-        showToastMessage('success', 'Default address updated');
-        fetchAddresses();
-      }
-    } catch (error) {
-      showToastMessage('error', 'Failed to set default address');
-    }
-  };
-
-  const editAddress = (address) => {
-    setEditingAddress(address);
-    setAddressForm({
-      label: address.label,
-      fullName: address.fullName,
-      phone: address.phone,
-      line1: address.line1,
-      line2: address.line2 || '',
-      city: address.city,
-      state: address.state,
-      pincode: address.pincode,
-      country: address.country,
-      isDefault: address.isDefault
-    });
-    setShowAddressForm(true);
   };
 
   // ==================== PASSWORD FUNCTIONS ====================
@@ -435,8 +303,9 @@ const ProfilePage = () => {
                 <label>First Name</label>
                 <input
                   type="text"
+                  maxLength={NAME_MAX_LENGTH}
                   value={profileData.firstName}
-                  onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                  onChange={(e) => setProfileData({ ...profileData, firstName: cleanName(e.target.value) })}
                   required
                 />
               </div>
@@ -444,8 +313,9 @@ const ProfilePage = () => {
                 <label>Last Name</label>
                 <input
                   type="text"
+                  maxLength={NAME_MAX_LENGTH}
                   value={profileData.lastName}
-                  onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                  onChange={(e) => setProfileData({ ...profileData, lastName: cleanName(e.target.value) })}
                   required
                 />
               </div>
@@ -465,8 +335,9 @@ const ProfilePage = () => {
               <label>Phone Number</label>
               <input
                 type="tel"
+                {...phoneInputProps}
                 value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                onChange={(e) => setProfileData({ ...profileData, phone: cleanPhone(e.target.value) })}
               />
             </div>
             <div className="form-actions">
@@ -492,293 +363,6 @@ const ProfilePage = () => {
               <span className="detail-label">Phone</span>
               <span className="detail-value">{profileData.phone || 'Not set'}</span>
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderOrders = () => (
-    <div className="profile-tab-content">
-      <div className="orders-card">
-        <div className="card-header">
-          <h3>My Orders</h3>
-          <span className="order-count">{orders.length} order(s)</span>
-        </div>
-
-        {ordersLoading ? (
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>Loading your orders...</p>
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="empty-state">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-              <path d="M3 6h18M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6M8 10v6M16 10v6" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-            <h4>No orders yet</h4>
-            <p>Start shopping to see your orders here</p>
-            <button className="btn-primary" onClick={() => router.push('/shop')}>
-              Start Shopping
-            </button>
-          </div>
-        ) : (
-          <div className="orders-list">
-            {orders.map((order) => (
-              <div key={order._id} className="order-item-p">
-                <div className="order-header">
-                  <div className="order-info">
-                    <span className="order-id">{order.orderNumber}</span>
-                    <span className="order-date">
-                      {new Date(order.createdAt).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                  <div className={`order-status status-${order.status}`}>
-                    {order.status}
-                  </div>
-                </div>
-                <div className="order-items">
-                  {order.items.slice(0, 2).map((item, idx) => (
-                    <div key={idx} className="order-item-preview">
-                      <img 
-                        src={item.image?.startsWith('http') ? item.image : `${IMAGE_URL}/uploads/products/${item.image}`} 
-                        alt={item.name} 
-                        onError={(e) => { e.target.src = '/default-product.png'; }}
-                      />
-                      <div className="item-details">
-                        <p className="item-name">{item.name}</p>
-                        <p className="item-qty">Qty: {item.quantity}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {order.items.length > 2 && (
-                    <div className="more-items">+{order.items.length - 2} more items</div>
-                  )}
-                </div>
-                <div className="order-footer">
-                  <div className="order-total">
-                    Total: <strong>₹{order.pricing.total.toFixed(2)}</strong>
-                  </div>
-                  <button className="view-order-btn" onClick={() => router.push(`/orders/${order._id}`)}>
-                    View Details
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderAddresses = () => (
-    <div className="profile-tab-content">
-      <div className="addresses-card">
-        <div className="card-header">
-          <h3>My Addresses</h3>
-          <button className="add-address-btn" onClick={() => {
-            setEditingAddress(null);
-            setAddressForm({
-              label: 'Home',
-              fullName: '',
-              phone: '',
-              line1: '',
-              line2: '',
-              city: '',
-              state: '',
-              pincode: '',
-              country: 'India',
-              isDefault: false
-            });
-            setShowAddressForm(true);
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 4v16M4 12h16" stroke="currentColor" strokeWidth="2"/>
-            </svg>
-            Add New Address
-          </button>
-        </div>
-
-        {showAddressForm && (
-          <div className="address-form-modal">
-            <div className="modal-overlay" onClick={() => setShowAddressForm(false)}></div>
-            <div className="modal-content">
-              <div className="modal-header">
-                <h3>{editingAddress ? 'Edit Address' : 'Add New Address'}</h3>
-                <button className="close-modal" onClick={() => setShowAddressForm(false)}>×</button>
-              </div>
-              <div className="modal-body">
-                <form onSubmit={handleAddressSubmit} className="address-form">
-                  <div className="form-group">
-                    <label>Address Label</label>
-                    <select
-                      value={addressForm.label}
-                      onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
-                    >
-                      <option value="Home">Home</option>
-                      <option value="Work">Work</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Full Name *</label>
-                    <input
-                      type="text"
-                      value={addressForm.fullName}
-                      onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
-                      required
-                      placeholder="Recipient full name"
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Phone Number *</label>
-                    <input
-                      type="tel"
-                      value={addressForm.phone}
-                      onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                      required
-                      placeholder="10-digit mobile number"
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Address Line 1 *</label>
-                    <input
-                      type="text"
-                      value={addressForm.line1}
-                      onChange={(e) => setAddressForm({ ...addressForm, line1: e.target.value })}
-                      required
-                      placeholder="House number, building, street"
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>Address Line 2 (Optional)</label>
-                    <input
-                      type="text"
-                      value={addressForm.line2}
-                      onChange={(e) => setAddressForm({ ...addressForm, line2: e.target.value })}
-                      placeholder="Area, landmark, etc."
-                    />
-                  </div>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>City *</label>
-                      <input
-                        type="text"
-                        value={addressForm.city}
-                        onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>State *</label>
-                      <input
-                        type="text"
-                        value={addressForm.state}
-                        onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Pincode *</label>
-                      <input
-                        type="text"
-                        value={addressForm.pincode}
-                        onChange={(e) => setAddressForm({ ...addressForm, pincode: e.target.value })}
-                        required
-                        pattern="[0-9]{6}"
-                        title="6-digit pincode"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Country *</label>
-                      <input
-                        type="text"
-                        value={addressForm.country}
-                        onChange={(e) => setAddressForm({ ...addressForm, country: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="form-group checkbox">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={addressForm.isDefault}
-                        onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
-                      />
-                      Set as default address
-                    </label>
-                  </div>
-                  
-                  <div className="form-actions">
-                    <button type="submit" className="btn-primary" disabled={loading}>
-                      {loading ? 'Saving...' : (editingAddress ? 'Update Address' : 'Save Address')}
-                    </button>
-                    <button type="button" className="btn-secondary" onClick={() => setShowAddressForm(false)}>
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {addresses.length === 0 ? (
-          <div className="empty-state">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
-            <h4>No addresses saved</h4>
-            <p>Add your first address for faster checkout</p>
-          </div>
-        ) : (
-          <div className="addresses-list">
-            {addresses.map((address) => (
-              <div key={address._id} className={`address-item ${address.isDefault ? 'default' : ''}`}>
-                {address.isDefault && <div className="default-badge">Default</div>}
-                <div className="address-type">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    {address.label === 'Home' && <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" stroke="currentColor" strokeWidth="1.5"/>}
-                    {address.label === 'Work' && <path d="M20 7h-4V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM12 4h0M12 12h0M8 12h0M16 12h0" stroke="currentColor" strokeWidth="1.5"/>}
-                    {address.label === 'Other' && <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zM12 12c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" stroke="currentColor" strokeWidth="1.5"/>}
-                  </svg>
-                  <span>{address.label}</span>
-                </div>
-                <div className="address-details">
-                  <p className="address-name">{address.fullName}</p>
-                  <p className="address-line">{address.line1}{address.line2 && `, ${address.line2}`}</p>
-                  <p className="address-location">{address.city}, {address.state} - {address.pincode}</p>
-                  <p className="address-phone">📞 {address.phone}</p>
-                </div>
-                <div className="address-actions">
-                  <button className="address-edit" onClick={() => editAddress(address)}>
-                    Edit
-                  </button>
-                  {!address.isDefault && (
-                    <button className="address-default" onClick={() => handleSetDefaultAddress(address._id)}>
-                      Set as Default
-                    </button>
-                  )}
-                  <button className="address-delete" onClick={() => handleDeleteAddress(address._id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>
@@ -842,7 +426,6 @@ const ProfilePage = () => {
           <p>Deleting your account will permanently remove all your data including:</p>
           <ul>
             <li>Personal information and profile data</li>
-            <li>Order history and addresses</li>
             <li>Cart items</li>
           </ul>
           <p className="warning-text">This action cannot be undone.</p>
@@ -920,26 +503,6 @@ const ProfilePage = () => {
             </button>
             
             <button
-              className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveTab('orders')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M3 6h18M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6M8 10v6M16 10v6" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
-              My Orders
-            </button>
-            
-            <button
-              className={`nav-item ${activeTab === 'addresses' ? 'active' : ''}`}
-              onClick={() => setActiveTab('addresses')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
-              Addresses
-            </button>
-            
-            <button
               className={`nav-item ${activeTab === 'password' ? 'active' : ''}`}
               onClick={() => setActiveTab('password')}
             >
@@ -963,8 +526,6 @@ const ProfilePage = () => {
 
         <div className="profile-content">
           {activeTab === 'profile' && renderProfile()}
-          {activeTab === 'orders' && renderOrders()}
-          {activeTab === 'addresses' && renderAddresses()}
           {activeTab === 'password' && renderChangePassword()}
           {activeTab === 'delete' && renderDeleteAccount()}
         </div>

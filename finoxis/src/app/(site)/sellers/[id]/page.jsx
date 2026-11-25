@@ -4,7 +4,12 @@ import JsonLd from '@/components/JsonLd';
 import { getSellerPageData } from '@/server/pageData';
 import { sellerJsonLd, sellerMetadata } from '@/server/seo';
 
-export const dynamic = 'force-dynamic';
+// Each supplier page is built on its first visit, then served from cache and refreshed
+// in the background at most every 5 minutes.
+export const revalidate = 300;
+export async function generateStaticParams() {
+  return []; // build nothing up front; cache each page on first request
+}
 
 export async function generateMetadata({ params }) {
   const { id } = await params;

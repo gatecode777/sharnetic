@@ -1,14 +1,50 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { formatImageUrl } from '@/lib/imageHelper';
 import { productPath } from '@/lib/routes';
 
-const ProductCard = ({ product, onEnquiry }) => {
-  if (!product) return null;
+const FALLBACK_IMAGE = '/default-product.png';
+// Generous on purpose: Flipkart's photo CDN can take ~15s to answer and those photos must
+// still appear. Only requests that never finish get replaced.
+const IMAGE_TIMEOUT_MS = 30000;
 
-  const imageUrl = formatImageUrl(product.images?.[0]);
+/**
+ * Safety net for photo hosts that never answer: onError never fires for a hung request,
+ * so the card would stay blank. Once the image is near the screen, give it 30s, then show
+ * the default product image.
+ */
+function useImageTimeoutFallback(imgRef, src) {
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img || !src || src === FALLBACK_IMAGE || typeof IntersectionObserver === 'undefined') return undefined;
+    let timer;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        timer = setTimeout(() => {
+          const loaded = img.complete && img.naturalWidth > 0;
+          if (!loaded && !img.src.endsWith(FALLBACK_IMAGE)) img.src = FALLBACK_IMAGE;
+        }, IMAGE_TIMEOUT_MS);
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(img);
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+    };
+  }, [imgRef, src]);
+}
+
+const ProductCard = ({ product, onEnquiry }) => {
+  const imgRef = useRef(null);
+  const imageUrl = product ? formatImageUrl(product.images?.[0]) : '';
+  useImageTimeoutFallback(imgRef, imageUrl);
+
+  if (!product) return null;
 
   const seller = product.seller || {};
   const sellerName = seller.name || 'Verified Indian Manufacturer';
@@ -29,6 +65,7 @@ const ProductCard = ({ product, onEnquiry }) => {
             {/* lazy: product photos come from third-party hosts that can hang; this lets the
                 page's own scripts load first so the page is clickable immediately. */}
             <img
+              ref={imgRef}
               src={imageUrl}
               alt={product.name}
               loading="lazy"
@@ -36,7 +73,7 @@ const ProductCard = ({ product, onEnquiry }) => {
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {
                 e.target.onerror = null;
-                e.target.src = '/default-product.png';
+                e.target.src = FALLBACK_IMAGE;
               }}
             />
           </Link>

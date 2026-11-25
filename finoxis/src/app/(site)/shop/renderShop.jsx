@@ -35,7 +35,6 @@ export async function renderShop(searchParams, category = null) {
         initialFilters={filters}
         initialData={data.products}
         initialCategories={data.categories}
-        initialSellers={data.sellers}
       />
     </Suspense>
   );

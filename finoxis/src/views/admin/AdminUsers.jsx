@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { userAPI } from '@/lib/api';
 import { BASE_URL } from '@/lib/config';
+import { cleanName, cleanPhone, cleanEmail, nameError, phoneError, emailError, phoneInputProps, NAME_MAX_LENGTH } from '@/lib/validation';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -156,7 +157,13 @@ const AdminUsers = () => {
   };
 
   const openEditModal = (user) => {
-    setSelectedUser(user);
+    // Normalise stored values (e.g. "+91 98765 43210") so the form starts valid.
+    setSelectedUser({
+      ...user,
+      firstName: cleanName(user.firstName || ''),
+      lastName: cleanName(user.lastName || ''),
+      phone: cleanPhone(user.phone || ''),
+    });
     setShowEditModal(true);
   };
 
@@ -167,7 +174,16 @@ const AdminUsers = () => {
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
-    
+    const invalid =
+      nameError(selectedUser.firstName, { label: 'First name' }) ||
+      nameError(selectedUser.lastName, { label: 'Last name' }) ||
+      emailError(selectedUser.email) ||
+      phoneError(selectedUser.phone, { label: 'Phone', required: false });
+    if (invalid) {
+      alert(invalid);
+      return;
+    }
+
     try {
       const updateData = {
         firstName: selectedUser.firstName,
@@ -490,10 +506,11 @@ const AdminUsers = () => {
                   <label>First Name</label>
                   <input
                     type="text"
+                    maxLength={NAME_MAX_LENGTH}
                     value={selectedUser.firstName}
                     onChange={(e) => setSelectedUser({
                       ...selectedUser,
-                      firstName: e.target.value
+                      firstName: cleanName(e.target.value)
                     })}
                     required
                   />
@@ -502,10 +519,11 @@ const AdminUsers = () => {
                   <label>Last Name</label>
                   <input
                     type="text"
+                    maxLength={NAME_MAX_LENGTH}
                     value={selectedUser.lastName}
                     onChange={(e) => setSelectedUser({
                       ...selectedUser,
-                      lastName: e.target.value
+                      lastName: cleanName(e.target.value)
                     })}
                     required
                   />
@@ -517,7 +535,7 @@ const AdminUsers = () => {
                     value={selectedUser.email}
                     onChange={(e) => setSelectedUser({
                       ...selectedUser,
-                      email: e.target.value
+                      email: cleanEmail(e.target.value)
                     })}
                     required
                   />
@@ -526,10 +544,11 @@ const AdminUsers = () => {
                   <label>Phone</label>
                   <input
                     type="tel"
+                    {...phoneInputProps}
                     value={selectedUser.phone || ''}
                     onChange={(e) => setSelectedUser({
                       ...selectedUser,
-                      phone: e.target.value
+                      phone: cleanPhone(e.target.value)
                     })}
                   />
                 </div>

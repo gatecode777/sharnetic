@@ -3,54 +3,58 @@
 import React, { useState, useEffect } from 'react';
 import { enquiryAPI } from '@/lib/api';
 import { formatImageUrl } from '@/lib/imageHelper';
+import { cleanName, cleanPhone, cleanEmail, nameError, phoneError, emailError, phoneInputProps, nameInputProps } from '@/lib/validation';
 
-const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' }) => {
-  const [formData, setFormData] = useState({
-    buyerName: '',
-    buyerEmail: '',
-    buyerPhone: '',
-    quantity: '25 Pieces',
-    city: '',
-    message: '',
-  });
+// Field -> sanitizer applied while typing / pasting.
+const CLEANERS = { buyerName: cleanName, buyerPhone: cleanPhone, buyerEmail: cleanEmail };
+
+// Every field starts empty (placeholders only show examples).
+const EMPTY_FORM = {
+  buyerName: '',
+  buyerEmail: '',
+  buyerPhone: '',
+  quantity: '',
+  city: '',
+  message: '',
+};
+
+const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '', initialPhone = '' }) => {
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // Prefill user details if logged in
+  // Start with an empty form every time it opens. The only values carried in are the ones the
+  // visitor already typed in the homepage "Post Your Buying Requirement" box.
   useEffect(() => {
     if (isOpen) {
       setSuccess(false);
       setError('');
-      try {
-        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        setFormData((prev) => ({
-          ...prev,
-          buyerName: storedUser.name || prev.buyerName,
-          buyerEmail: storedUser.email || prev.buyerEmail,
-          buyerPhone: storedUser.phone || prev.buyerPhone,
-          city: storedUser.city || prev.city,
-          quantity: product?.moq || '25 Pieces',
-          message: initialMessage || (product ? `I am interested in ${product.name}. Please share wholesale price and minimum delivery time.` : ''),
-        }));
-      } catch (e) {
-        // Ignore JSON error
-      }
+      setFormData({ ...EMPTY_FORM, message: initialMessage || '', buyerPhone: cleanPhone(initialPhone) });
     }
-  }, [isOpen, product, initialMessage]);
+  }, [isOpen, product, initialMessage, initialPhone]);
 
   if (!isOpen) return null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const clean = CLEANERS[name];
+    setFormData((prev) => ({ ...prev, [name]: clean ? clean(value) : value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.buyerName.trim() || !formData.buyerPhone.trim() || !formData.buyerEmail.trim()) {
       setError('Please fill in your name, phone number, and email.');
+      return;
+    }
+    const invalid =
+      nameError(formData.buyerName, { label: 'Name' }) ||
+      phoneError(formData.buyerPhone, { label: 'Mobile number' }) ||
+      emailError(formData.buyerEmail, { label: 'Email' });
+    if (invalid) {
+      setError(invalid);
       return;
     }
 
@@ -214,6 +218,7 @@ const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' })
                       name="buyerName"
                       required
                       placeholder="e.g. Ramesh Patel"
+                      {...nameInputProps}
                       value={formData.buyerName}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -232,6 +237,7 @@ const EnquiryModal = ({ isOpen, onClose, product, seller, initialMessage = '' })
                         name="buyerPhone"
                         required
                         placeholder="9876543210"
+                        {...phoneInputProps}
                         value={formData.buyerPhone}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-r-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
