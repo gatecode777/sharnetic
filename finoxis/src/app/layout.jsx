@@ -26,6 +26,8 @@ import { SITE_URL } from '@/lib/site';
 export const metadata = {
   // Makes every relative canonical / Open Graph URL absolute (https://www.finoxis.org/...).
   metadataBase: new URL(SITE_URL),
+  // Google Search Console ownership check. Keep this, or Google can lose the verification.
+  verification: { google: 'jv8vOmDeXMOWAiwuNd6hbebthOzLxYaIapQHGEmkD0o' },
   title: {
     default: 'Finoxis | B2B Marketplace & Verified Suppliers',
     template: '%s | Finoxis',
