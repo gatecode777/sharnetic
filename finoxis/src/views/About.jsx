@@ -4,18 +4,21 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { productAPI, adminCategoryAPI } from '@/lib/api';
 
-const About = () => {
-    const [stats, setStats] = useState({
-        customers: 0,
-        products: 0,
-        orders: 0,
-        years: 0
-    });
-    const [loading, setLoading] = useState(true);
+const About = ({ initialProductCount }) => {
+    const hasInitial = initialProductCount != null;
+    // Same numbers fetchStats() would set, so the stats render on the server.
+    const [stats, setStats] = useState(
+        hasInitial
+            ? { customers: 12500, products: initialProductCount, orders: 8750, years: 3 }
+            : { customers: 0, products: 0, orders: 0, years: 0 }
+    );
+    const [loading, setLoading] = useState(!hasInitial);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        fetchStats();
+        // Server already supplied the product count -> no browser request needed.
+        if (initialProductCount == null) fetchStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchStats = async () => {

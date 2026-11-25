@@ -7,12 +7,14 @@ import { sellerAPI } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import EnquiryModal from '@/components/EnquiryModal';
 
-const SellerDetailPage = () => {
+// initialSeller / initialProducts come from the server (same API data), so the supplier
+// and its catalog are in the first HTML. Without them the page loads in the browser as before.
+const SellerDetailPage = ({ initialSeller, initialProducts }) => {
   const { id } = useParams();
 
-  const [seller, setSeller] = useState(null);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [seller, setSeller] = useState(initialSeller || null);
+  const [products, setProducts] = useState(initialProducts || []);
+  const [loading, setLoading] = useState(!initialSeller);
   const [error, setError] = useState('');
 
   // Enquiry Modal
@@ -39,9 +41,10 @@ const SellerDetailPage = () => {
       }
     };
 
-    if (id) {
+    if (id && !initialSeller) {
       fetchSellerData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleOpenProductEnquiry = (product) => {

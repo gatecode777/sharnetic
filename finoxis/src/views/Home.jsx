@@ -7,21 +7,25 @@ import { productAPI, adminCategoryAPI, sellerAPI } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import EnquiryModal from '@/components/EnquiryModal';
 import { BASE_URL } from '@/lib/config';
+import { categoryPath, sellerPath } from '@/lib/routes';
 
 const IMAGE_URL = BASE_URL;
 
-const HomeContent = () => {
+// initial* props come from the server (same API data), so the first HTML already
+// contains every card and link. If one is missing, that section loads in the browser as before.
+const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => {
     const router = useRouter();
-    const [categories, setCategories] = useState([]);
-    const [loadingCategories, setLoadingCategories] = useState(true);
-    const [featuredProducts, setFeaturedProducts] = useState([]);
-    const [loadingProducts, setLoadingProducts] = useState(true);
-    const [topSellers, setTopSellers] = useState([]);
-    const [loadingSellers, setLoadingSellers] = useState(true);
+    const [categories, setCategories] = useState(initialCategories || []);
+    const [loadingCategories, setLoadingCategories] = useState(!initialCategories);
+    const [featuredProducts, setFeaturedProducts] = useState(initialProducts || []);
+    const [loadingProducts, setLoadingProducts] = useState(!initialProducts);
+    const [topSellers, setTopSellers] = useState(initialSellers || []);
+    const [loadingSellers, setLoadingSellers] = useState(!initialSellers);
 
     // Quick requirement hero state
     const [heroRequirement, setHeroRequirement] = useState('');
     const [heroPhone, setHeroPhone] = useState('');
+    const [heroErrors, setHeroErrors] = useState({ requirement: '', phone: '' });
 
     // Modal state
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -35,9 +39,10 @@ const HomeContent = () => {
             behavior: 'instant'
         });
         
-        fetchCategories();
-        fetchFeaturedProducts();
-        fetchTopSellers();
+        if (!initialCategories) fetchCategories();
+        if (!initialProducts) fetchFeaturedProducts();
+        if (!initialSellers) fetchTopSellers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fetch categories
@@ -104,8 +109,29 @@ const HomeContent = () => {
         setIsEnquiryOpen(true);
     };
 
+    // Product name: letters and spaces only, max 50 characters.
+    const handleHeroRequirementChange = (e) => {
+        const clean = e.target.value.replace(/[^A-Za-z ]/g, '').replace(/ {2,}/g, ' ').slice(0, 50);
+        setHeroRequirement(clean);
+        if (heroErrors.requirement) setHeroErrors((prev) => ({ ...prev, requirement: '' }));
+    };
+
+    // Mobile number: digits only, exactly 10. A pasted "+91 98765 43210" keeps the last 10 digits.
+    const handleHeroPhoneChange = (e) => {
+        let digits = e.target.value.replace(/\D/g, '');
+        if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(digits.length - 10);
+        setHeroPhone(digits.slice(0, 10));
+        if (heroErrors.phone) setHeroErrors((prev) => ({ ...prev, phone: '' }));
+    };
+
     const handleHeroSubmit = (e) => {
         e.preventDefault();
+        const errors = {
+            requirement: heroRequirement.trim() ? '' : 'Please enter a product or service name.',
+            phone: /^\d{10}$/.test(heroPhone) ? '' : 'Please enter a valid 10-digit mobile number.',
+        };
+        setHeroErrors(errors);
+        if (errors.requirement || errors.phone) return;
         setSelectedProduct(null);
         setSelectedSeller(null);
         setIsEnquiryOpen(true);
@@ -160,7 +186,7 @@ const HomeContent = () => {
                                 </p>
                             </div>
 
-                            <form onSubmit={handleHeroSubmit} className="space-y-3.5">
+                            <form onSubmit={handleHeroSubmit} noValidate className="space-y-3.5">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
                                         Product / Service Name
@@ -169,10 +195,15 @@ const HomeContent = () => {
                                         type="text"
                                         placeholder="e.g. Cotton Shirts, Digital Clocks, Spices..."
                                         value={heroRequirement}
-                                        onChange={(e) => setHeroRequirement(e.target.value)}
-                                        className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        onChange={handleHeroRequirementChange}
+                                        maxLength={50}
+                                        aria-invalid={!!heroErrors.requirement}
+                                        className={`w-full px-3.5 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${heroErrors.requirement ? 'border-red-500' : 'border-gray-300'}`}
                                         required
                                     />
+                                    {heroErrors.requirement && (
+                                        <p className="text-xs text-red-600 mt-1">{heroErrors.requirement}</p>
+                                    )}
                                 </div>
 
                                 <div>
@@ -187,11 +218,19 @@ const HomeContent = () => {
                                             type="tel"
                                             placeholder="Enter 10-digit mobile number"
                                             value={heroPhone}
-                                            onChange={(e) => setHeroPhone(e.target.value)}
-                                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-r-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            onChange={handleHeroPhoneChange}
+                                            inputMode="numeric"
+                                            pattern="[0-9]{10}"
+                                            maxLength={10}
+                                            autoComplete="tel-national"
+                                            aria-invalid={!!heroErrors.phone}
+                                            className={`w-full px-3.5 py-2.5 border rounded-r-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${heroErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
                                             required
                                         />
                                     </div>
+                                    {heroErrors.phone && (
+                                        <p className="text-xs text-red-600 mt-1">{heroErrors.phone}</p>
+                                    )}
                                 </div>
 
                                 <button
@@ -239,7 +278,7 @@ const HomeContent = () => {
                             {categories.map((category) => (
                                 <Link
                                     key={category._id}
-                                    href={`/shop?category=${category._id}`}
+                                    href={categoryPath(category)}
                                     className="bg-white rounded-xl p-4 border border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col items-center text-center group"
                                 >
                                     <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mb-3 overflow-hidden border border-blue-100 group-hover:scale-105 transition-transform">
@@ -348,7 +387,7 @@ const HomeContent = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <Link href={`/seller/${seller.slug || seller._id}`}>
+                                                <Link href={sellerPath(seller)}>
                                                     <h3 className="text-base font-bold text-gray-900 hover:text-blue-600 transition-colors">
                                                         {seller.name}
                                                     </h3>
@@ -391,7 +430,7 @@ const HomeContent = () => {
                                             <span>Enquiry</span>
                                         </button>
                                         <Link
-                                            href={`/seller/${seller.slug || seller._id}`}
+                                            href={sellerPath(seller)}
                                             className="px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
                                         >
                                             Catalog

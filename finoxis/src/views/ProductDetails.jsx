@@ -6,15 +6,18 @@ import { useParams } from 'next/navigation';
 import { productAPI } from '@/lib/api';
 import EnquiryModal from '@/components/EnquiryModal';
 import { formatImageUrl } from '@/lib/imageHelper';
+import { categoryPath, productPath, sellerPath } from '@/lib/routes';
 
-const ProductDetails = () => {
+// initialProduct / initialRelated come from the server (same API data), so the product
+// is in the first HTML. Without them the page loads in the browser as before.
+const ProductDetails = ({ initialProduct, initialRelated }) => {
   const { slug } = useParams();
 
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState(initialProduct || null);
+  const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState(initialRelated || []);
   const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
 
   const getProductImage = (prod, imageIndex = 0) => {
@@ -58,9 +61,10 @@ const ProductDetails = () => {
       }
     };
 
-    if (slug) {
+    if (slug && !initialProduct) {
       fetchProduct();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   if (loading) {
@@ -103,7 +107,7 @@ const ProductDetails = () => {
           <span>/</span>
           {product.category && (
             <>
-              <Link href={`/shop?category=${product.category._id}`} className="hover:text-blue-600">
+              <Link href={categoryPath(product.category)} className="hover:text-blue-600">
                 {product.category.name}
               </Link>
               <span>/</span>
@@ -121,6 +125,7 @@ const ProductDetails = () => {
                 <img
                   src={getProductImage(product, selectedImage)}
                   alt={product.name}
+                  loading="lazy"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-contain"
                   onError={(e) => {
@@ -144,6 +149,7 @@ const ProductDetails = () => {
                       <img
                         src={getProductImage(product, index)}
                         alt={`Thumbnail ${index + 1}`}
+                        loading="lazy"
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                       />
@@ -172,6 +178,13 @@ const ProductDetails = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug mt-1 mb-4">
                 {product.name}
               </h1>
+
+              {/* Out-of-stock products stay live (200 OK) with a clear label instead of disappearing. */}
+              {product.stock?.inStock === false && (
+                <span className="inline-flex items-center text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-md mb-4">
+                  <i className="fas fa-times-circle mr-1.5"></i> Out of Stock
+                </span>
+              )}
 
               {/* Pricing Box - IndiaMART style */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
@@ -302,7 +315,7 @@ const ProductDetails = () => {
               </button>
               {seller._id && (
                 <Link
-                  href={`/seller/${seller.slug || seller._id}`}
+                  href={sellerPath(seller)}
                   className="w-full block text-center border border-gray-300 hover:border-blue-600 text-gray-700 hover:text-blue-600 font-bold py-2 px-4 rounded-lg text-xs transition"
                 >
                   View All Products from this Seller
@@ -336,13 +349,14 @@ const ProductDetails = () => {
               {relatedProducts.map((relProd) => (
                 <Link
                   key={relProd._id}
-                  href={`/product/${relProd.slug}`}
+                  href={productPath(relProd)}
                   className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition flex flex-col justify-between group"
                 >
                   <div className="h-44 rounded-lg overflow-hidden bg-gray-50 mb-3">
                     <img
                       src={getProductImage(relProd, 0)}
                       alt={relProd.name}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition"
                       onError={(e) => { e.target.onerror = null; e.target.src = '/default-product.png'; }}
                     />

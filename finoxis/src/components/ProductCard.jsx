@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { formatImageUrl } from '@/lib/imageHelper';
+import { productPath } from '@/lib/routes';
 
 const ProductCard = ({ product, onEnquiry }) => {
   if (!product) return null;
@@ -24,10 +25,13 @@ const ProductCard = ({ product, onEnquiry }) => {
       <div>
         {/* Product Image */}
         <div className="relative overflow-hidden bg-gray-50 h-52">
-          <Link href={`/product/${product.slug}`} className="block h-full w-full">
+          <Link href={productPath(product)} className="block h-full w-full">
+            {/* lazy: product photos come from third-party hosts that can hang; this lets the
+                page's own scripts load first so the page is clickable immediately. */}
             <img
               src={imageUrl}
               alt={product.name}
+              loading="lazy"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {
@@ -54,7 +58,7 @@ const ProductCard = ({ product, onEnquiry }) => {
           )}
 
           {/* Product Title */}
-          <Link href={`/product/${product.slug}`} className="block">
+          <Link href={productPath(product)} className="block">
             <h3 className="text-sm font-semibold text-gray-800 hover:text-blue-600 transition-colors line-clamp-2 min-h-[40px] leading-snug">
               {product.name}
             </h3>
