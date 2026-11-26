@@ -7,6 +7,7 @@ import { getAllProducts, getProductBySlug } from './controllers/publicProductCon
 import { getAllSellers, getSellerById } from './controllers/sellerController';
 import { getAllCategories } from './controllers/categoryController';
 import { categoryPath } from '@/lib/routes';
+import { CATALOG_TAG } from './revalidate';
 
 /**
  * Server-side data for public pages.
@@ -84,13 +85,17 @@ const cacheKey = (query = {}) =>
     .sort()
     .reduce((acc, k) => ({ ...acc, [k]: String(query[k]) }), {});
 
+// Admin edits clear these immediately (server/revalidate.js); the 1 hour limit covers changes made
+// outside the website, such as scripts or direct database edits.
+const CACHE_OPTIONS = { revalidate: 3600, tags: [CATALOG_TAG] };
+
 const cachedCategories = unstable_cache(
   async () => (await runOrThrow(getAllCategories, { isActive: 'true' })).categories || [],
   ['finoxis-active-categories'],
-  { revalidate: 300 } // 1 + (number of categories) queries -> at most once every 5 minutes
+  CACHE_OPTIONS
 );
-const cachedProducts = unstable_cache((query) => runOrThrow(getAllProducts, query), ['finoxis-products'], { revalidate: 60 });
-const cachedSellers = unstable_cache((query) => runOrThrow(getAllSellers, query), ['finoxis-sellers'], { revalidate: 60 });
+const cachedProducts = unstable_cache((query) => runOrThrow(getAllProducts, query), ['finoxis-products'], CACHE_OPTIONS);
+const cachedSellers = unstable_cache((query) => runOrThrow(getAllSellers, query), ['finoxis-sellers'], CACHE_OPTIONS);
 
 /** Active categories (same call the Home/Shop/Sellers pages make). */
 export const getActiveCategories = cache(async () => {

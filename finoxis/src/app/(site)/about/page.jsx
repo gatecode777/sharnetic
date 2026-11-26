@@ -3,8 +3,8 @@ import JsonLd from '@/components/JsonLd';
 import { getActiveProductCount } from '@/server/pageData';
 import { organizationJsonLd } from '@/lib/site';
 
-// Cached; product count refreshed in the background at most once a minute.
-export const revalidate = 60;
+// Cached for up to 1 hour; admin edits refresh it immediately (server/revalidate.js).
+export const revalidate = 3600;
 
 export const metadata = {
   title: 'About Us',

@@ -5,9 +5,8 @@ import { getProductPageData } from '@/server/pageData';
 import { productJsonLd, productMetadata } from '@/server/seo';
 import { productPath } from '@/lib/routes';
 
-// Each product page is built on its first visit, then served from cache and refreshed
-// in the background at most every 5 minutes (admin edits show up within 5 minutes).
-export const revalidate = 300;
+// Cached for up to 1 hour; admin edits refresh it immediately (server/revalidate.js).
+export const revalidate = 3600;
 export async function generateStaticParams() {
   return []; // build nothing up front; cache each page on first request
 }

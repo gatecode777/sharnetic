@@ -12,6 +12,11 @@ export default function robots() {
     rules: [
       { userAgent: '*', allow: '/', disallow },
       ...namedBots.map((userAgent) => ({ userAgent, allow: '/', disallow })),
+      // AI training crawler: may read the pages that describe the company, not the ~17,000 catalog pages.
+      // ChatGPT search (OAI-SearchBot, ChatGPT-User) is not affected.
+      { userAgent: 'GPTBot', allow: ['/$', '/about', '/contact', '/llms.txt'], disallow: '/' },
+      // Brand-monitoring crawler with no search value.
+      { userAgent: ['AwarioBot', 'AwarioSmartBot', 'AwarioRssBot'], disallow: '/' },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -13,6 +13,21 @@ const MainHeader = () => {
   const { user, logout, isLoggedIn } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Three-line menu used on phones and tablets (below 1024px). Laptop screens show the full header.
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const closeMenu = () => setIsMenuOpen(false);
+
+  useEffect(() => {
+    setIsMenuOpen(false); // close after moving to another page
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setIsMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isMenuOpen]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -100,7 +115,7 @@ const MainHeader = () => {
       {/* Main Header with Generous Spacing */}
       <header className="bg-white shadow-sm sticky top-0 z-40">
         <div className="container mx-auto px-6 max-w-7xl middle-header-wrapper" style={{ paddingTop: '22px', paddingBottom: '22px' }}>
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-8">
+          <div className="header-main-row flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-8">
 
             {/* Logo */}
             <Link href="/" className="flex items-center flex-shrink-0 hover:opacity-95 transition">
@@ -113,7 +128,7 @@ const MainHeader = () => {
             </Link>
 
             {/* Search Bar - Modern Inset Design with Breathing Space */}
-            <div className="w-full md:flex-1 max-w-2xl mx-auto px-0 md:px-4">
+            <div className="header-search w-full md:flex-1 max-w-2xl mx-auto px-0 md:px-4">
               <form onSubmit={handleSearch} className="search-container-modern">
                 <div className="search-category-pill hidden sm:flex">
                   <i className="fas fa-search mr-2 text-blue-600"></i>
@@ -137,8 +152,20 @@ const MainHeader = () => {
               </form>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center space-x-3.5 flex-shrink-0">
+            {/* Three-line menu button (phones and tablets) */}
+            <button
+              type="button"
+              className="header-hamburger lg:hidden"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMenuOpen}
+              aria-controls="main-menu"
+            >
+              <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+            </button>
+
+            {/* Action Buttons (laptop; on smaller screens they are inside the menu) */}
+            <div className="hidden lg:flex items-center space-x-3.5 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsRequirementModalOpen(true)}
@@ -162,7 +189,11 @@ const MainHeader = () => {
         </div>
 
         {/* Navigation Menu with Spacious Row & Padding */}
-        <div className="border-t border-gray-200 bg-gray-50/80">
+        <div
+          id="main-menu"
+          className={`main-nav-panel ${isMenuOpen ? 'block' : 'hidden'} lg:block border-t border-gray-200 bg-gray-50/80`}
+          onClick={(e) => e.target.closest('a') && closeMenu()}
+        >
           <div className="container mx-auto px-6 py-3 max-w-7xl">
             {/* Vertical padding lives here: a global `.container { padding: 0 24px }` rule cancels py-* on the container. */}
             <div className="flex flex-wrap items-center justify-between text-sm font-bold tracking-wide py-3">
@@ -246,6 +277,51 @@ const MainHeader = () => {
                   </li>
                 </ul>
               </nav>
+              {/* Buttons and account links for phones and tablets */}
+              <div className="main-nav-actions lg:hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenu();
+                    setIsRequirementModalOpen(true);
+                  }}
+                  className="btn-requirement"
+                >
+                  <i className="fas fa-edit text-sm"></i>
+                  <span>Post Requirement</span>
+                </button>
+
+                {!isLoggedIn ? (
+                  <>
+                    <Link href="/login" className="btn-header-login">
+                      <i className="fas fa-user-circle text-sm text-gray-500"></i>
+                      <span>Login</span>
+                    </Link>
+                    <Link href="/register" className="btn-header-login">
+                      <i className="fas fa-user-plus text-sm text-gray-500"></i>
+                      <span>Register</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/profile" className="btn-header-login">
+                      <i className="fas fa-user text-sm text-blue-600"></i>
+                      <span>My Profile</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        handleLogout();
+                      }}
+                      className="btn-header-login"
+                    >
+                      <i className="fas fa-sign-out-alt text-sm text-red-600"></i>
+                      <span>Logout</span>
+                    </button>
+                  </>
+                )}
+              </div>
               <div className="hidden lg:flex items-center text-gray-500 space-x-6">
                 <span className="flex items-center">
                   <i className="fas fa-check-double text-green-600 mr-1.5"></i> Verified Trade Leads

@@ -19,6 +19,7 @@ import '@/styles/admin/AdminCategories.css';
 import '@/styles/admin/AdminOrders.css';
 import '@/styles/admin/AdminProfile.css';
 import '@/styles/index.css';
+import '@/styles/responsive.css';
 
 import Providers from './providers';
 import { SITE_URL } from '@/lib/site';

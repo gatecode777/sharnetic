@@ -234,18 +234,18 @@ const SellersPage = ({ initialFilters, initialData, initialCategories }) => {
               >
                 <div>
                   <div className="flex items-start justify-between mb-3">
-                    <div>
+                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                       <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full uppercase tracking-wider">
                         {seller.mainCategory?.name || 'Main Category'}
                       </span>
                       {seller.isVerified && (
-                        <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-1.5 inline-flex items-center">
+                        <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full inline-flex items-center">
                           <i className="fas fa-shield-alt mr-1 text-green-600"></i> Verified
                         </span>
                       )}
                     </div>
                     {seller.rating && (
-                      <span className="bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold px-2 py-0.5 rounded-md flex items-center">
+                      <span className="flex-shrink-0 ml-2 bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold px-2 py-0.5 rounded-md flex items-center">
                         <i className="fas fa-star text-amber-500 mr-1 text-[10px]"></i>
                         {seller.rating}
                       </span>
@@ -315,7 +315,7 @@ const SellersPage = ({ initialFilters, initialData, initialCategories }) => {
               Showing Page <strong className="text-gray-900">{page}</strong> of <strong className="text-gray-900">{totalPages}</strong> ({totalSellers.toLocaleString()} Total Suppliers)
             </span>
 
-            <div className="flex items-center space-x-1.5">
+            <div className="flex flex-wrap justify-center items-center gap-y-2 space-x-1.5">
               {/* Real <a href> links so Google can follow every page; disabled state unchanged. */}
               {page <= 1 ? (
                 <button
