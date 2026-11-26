@@ -1,6 +1,7 @@
 import Category from '../models/Category';
 import Product from '../models/Product';
 import { deleteUpload } from '../upload';
+import { toSearchPattern } from '../query';
 
 // Helper function to delete image file
 const deleteImageFile = (filename) => deleteUpload('categories', filename);
@@ -14,10 +15,11 @@ export const getAllCategories = async (req, res) => {
 
     const query = {};
 
-    if (search) {
+    const pattern = toSearchPattern(search);
+    if (pattern) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { name: { $regex: pattern, $options: 'i' } },
+        { description: { $regex: pattern, $options: 'i' } },
       ];
     }
 
@@ -27,18 +29,18 @@ export const getAllCategories = async (req, res) => {
 
     const categories = await Category.find(query).sort({ order: 1, createdAt: -1 });
 
-    const categoriesWithCount = await Promise.all(
-      categories.map(async (category) => {
-        const productCount = await Product.countDocuments({
-          category: category._id,
-          isActive: true,
-        });
-        
-        const obj = category.toObject();
-        obj.productCount = productCount;
-        return obj;
-      })
-    );
+    // One grouped count for all categories (instead of one count query per category).
+    const counts = await Product.aggregate([
+      { $match: { isActive: true, category: { $in: categories.map((c) => c._id) } } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map(counts.map((row) => [String(row._id), row.count]));
+
+    const categoriesWithCount = categories.map((category) => {
+      const obj = category.toObject();
+      obj.productCount = countMap.get(String(category._id)) || 0;
+      return obj;
+    });
 
     res.status(200).json({
       success: true,
@@ -285,7 +287,7 @@ export const deleteCategoryImage = async (req, res) => {
 
     // Delete image file
     deleteImageFile(category.image);
-    
+
     // Remove image reference from category
     category.image = '';
     await category.save();

@@ -247,7 +247,7 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
 
             <div className="container mx-auto px-4 py-10 max-w-6xl">
                 {/* Dynamic Categories Section */}
-                <section id="categories" className="mb-14">
+                <section id="categories" className="pt-8 md:pt-10 mb-14">
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
@@ -374,8 +374,8 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
                                 >
                                     <div>
                                         <div className="flex items-start justify-between mb-2">
-                                            <div className="flex-1">
-                                                <div className="flex items-center space-x-1.5 mb-1">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-1.5 mb-1">
                                                     <span className="text-[10px] font-extrabold bg-blue-100 text-blue-800 px-2 py-0.5 rounded uppercase tracking-wider">
                                                         {seller.mainCategory?.name || 'Supplier'}
                                                     </span>
@@ -392,7 +392,7 @@ const HomeContent = ({ initialCategories, initialProducts, initialSellers }) => 
                                                 </Link>
                                             </div>
                                             {seller.rating && (
-                                                <span className="bg-amber-50 text-amber-800 font-extrabold text-xs px-2 py-1 rounded-md border border-amber-200 flex items-center">
+                                                <span className="flex-shrink-0 ml-2 bg-amber-50 text-amber-800 font-extrabold text-xs px-2 py-1 rounded-md border border-amber-200 flex items-center">
                                                     <i className="fas fa-star text-amber-500 mr-1 text-[10px]"></i>
                                                     {seller.rating}
                                                 </span>

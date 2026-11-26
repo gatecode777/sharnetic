@@ -3,9 +3,8 @@ import JsonLd from '@/components/JsonLd';
 import { getHomeData } from '@/server/pageData';
 import { organizationJsonLd, websiteJsonLd } from '@/lib/site';
 
-// Served ready-made from cache and refreshed in the background at most once a minute,
-// so a click on "Home" never waits for the database.
-export const revalidate = 60;
+// Cached for up to 1 hour; admin edits refresh it immediately (server/revalidate.js).
+export const revalidate = 3600;
 
 export const metadata = { alternates: { canonical: '/' } };
 

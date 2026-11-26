@@ -7,6 +7,9 @@ import { useRouter, usePathname } from 'next/navigation';
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  // Phones / tablets: the sidebar is a slide-in drawer that starts closed.
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isSmallScreen = () => window.matchMedia('(max-width: 1024px)').matches;
   const router = useRouter();
   const pathname = usePathname();
 
@@ -31,7 +34,8 @@ const AdminLayout = ({ children }) => {
   };
 
   return (
-    <div className={`admin-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+    <div className={`admin-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'} ${mobileOpen ? 'mobile-open' : ''}`}>
+      <div className="admin-backdrop" onClick={() => setMobileOpen(false)} aria-hidden="true" />
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <div className="sidebar-header">
@@ -40,13 +44,13 @@ const AdminLayout = ({ children }) => {
           </div>
           <button
             className="sidebar-toggle"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => (isSmallScreen() ? setMobileOpen(false) : setSidebarOpen(!sidebarOpen))}
           >
             <i className={`fas fa-${sidebarOpen ? 'angle-left' : 'angle-right'}`}></i>
           </button>
         </div>
 
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" onClick={(e) => e.target.closest('a') && setMobileOpen(false)}>
           <Link
             href="/admin/dashboard"
             className={`nav-item-a ${isActive('/admin/dashboard') ? 'active' : ''}`}
@@ -111,7 +115,11 @@ const AdminLayout = ({ children }) => {
           <div className="header-left">
             <button
               className="mobile-menu-btn"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              onClick={() => {
+                setSidebarOpen(true);
+                setMobileOpen(true);
+              }}
+              aria-label="Open menu"
             >
               <i className="fas fa-bars"></i>
             </button>

@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import connectDB from './db';
+import { isCatalogWrite, refreshCatalog } from './revalidate';
 
 /**
  * Small Express-compatible layer for Next.js Route Handlers.
@@ -177,12 +178,16 @@ function errorResponse(err) {
 export function handle(...chain) {
   return async function routeHandler(request, ctx) {
     const res = new ApiResponse();
+    let catalogWrite = false;
 
     try {
       const req = await buildRequest(request, ctx);
       await connectDB();
 
       for (const fn of chain) {
+        // Reaching the last function (the controller) means auth passed; it may change catalog data.
+        if (fn === chain[chain.length - 1]) catalogWrite = isCatalogWrite(req.method, req.path);
+
         let nextCalled = false;
         let nextError;
 
@@ -200,6 +205,9 @@ export function handle(...chain) {
       }
     } catch (err) {
       return errorResponse(err);
+    } finally {
+      // Also after a failure: a bulk import can save some rows before it stops.
+      if (catalogWrite) refreshCatalog();
     }
 
     return res.toResponse();

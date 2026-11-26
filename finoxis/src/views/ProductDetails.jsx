@@ -252,7 +252,7 @@ const ProductDetails = ({ initialProduct, initialRelated }) => {
           {/* Right: Supplier / Seller Card (IndiaMART Profile style) (3 cols) */}
           <div className="lg:col-span-3 bg-white p-6 rounded-2xl border-2 border-blue-500 shadow-md flex flex-col justify-between">
             <div>
-              <div className="flex items-center space-x-1.5 mb-2">
+              <div className="flex flex-wrap items-center gap-1.5 mb-2">
                 <span className="bg-green-100 text-green-800 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase flex items-center">
                   <i className="fas fa-shield-alt mr-1 text-green-600"></i> Verified Supplier
                 </span>

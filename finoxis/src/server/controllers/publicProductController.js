@@ -1,4 +1,8 @@
 import Product from '../models/Product';
+import { toPageNumber, toLimit, toSearchPattern } from '../query';
+
+// Largest page the public API will return (the website itself asks for at most 12).
+const MAX_PRODUCTS = 100;
 
 // ==================== GET ALL PRODUCTS (PUBLIC) ====================
 export const getAllProducts = async (req, res) => {
@@ -38,8 +42,9 @@ export const getAllProducts = async (req, res) => {
       query.tags = tag;
     }
 
-    if (search?.trim()) {
-      query.name = { $regex: search.trim(), $options: "i" };
+    const pattern = toSearchPattern(search);
+    if (pattern) {
+      query.name = { $regex: pattern, $options: "i" };
     }
 
     if (minPrice || maxPrice) {
@@ -56,14 +61,16 @@ export const getAllProducts = async (req, res) => {
     };
     const sortQuery = sortOptions[sort] || sortOptions.createdAt;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNumber = toPageNumber(page);
+    const pageSize = toLimit(limit, 12, MAX_PRODUCTS);
+    const skip = (pageNumber - 1) * pageSize;
     const totalProducts = await Product.countDocuments(query);
-    const totalPages = Math.ceil(totalProducts / parseInt(limit));
+    const totalPages = Math.ceil(totalProducts / pageSize);
 
     const products = await Product.find(query)
       .sort(sortQuery)
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(pageSize)
       .select("-__v")
       .populate('category', 'name slug')
       .populate('seller', 'name slug city state rating isVerified trustSeal phone email contactPerson businessType');
@@ -73,7 +80,7 @@ export const getAllProducts = async (req, res) => {
       products,
       totalProducts,
       totalPages,
-      currentPage: parseInt(page),
+      currentPage: pageNumber,
     });
   } catch (error) {
     console.error("getAllProducts (public) error:", error);
@@ -137,13 +144,15 @@ export const getByCategory = async (req, res) => {
       query.category = category;
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNumber = toPageNumber(page);
+    const pageSize = toLimit(limit, 12, MAX_PRODUCTS);
+    const skip = (pageNumber - 1) * pageSize;
     const totalProducts = await Product.countDocuments(query);
 
     const products = await Product.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(pageSize)
       .select("-__v")
       .populate('category', 'name slug')
       .populate('seller', 'name slug city state rating isVerified trustSeal');
@@ -152,8 +161,8 @@ export const getByCategory = async (req, res) => {
       success: true,
       products,
       totalProducts,
-      totalPages: Math.ceil(totalProducts / parseInt(limit)),
-      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalProducts / pageSize),
+      currentPage: pageNumber,
       category,
     });
   } catch (error) {
@@ -167,20 +176,21 @@ export const searchProducts = async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;
 
-    if (!q?.trim()) {
+    const pattern = toSearchPattern(q);
+    if (!pattern) {
       return res.status(400).json({ success: false, message: "Search query is required" });
     }
 
     const products = await Product.find({
       isActive: true,
       $or: [
-        { name: { $regex: q.trim(), $options: "i" } },
-        { description: { $regex: q.trim(), $options: "i" } },
-        { tags: { $regex: q.trim(), $options: "i" } },
+        { name: { $regex: pattern, $options: "i" } },
+        { description: { $regex: pattern, $options: "i" } },
+        { tags: { $regex: pattern, $options: "i" } },
       ],
     })
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
+      .limit(toLimit(limit, 10, MAX_PRODUCTS))
       .select("name slug category seller pricing images tags unit moq")
       .populate('category', 'name slug')
       .populate('seller', 'name slug city state rating isVerified trustSeal');
@@ -205,7 +215,7 @@ export const getProductsByTag = async (req, res) => {
 
     const products = await Product.find({ isActive: true, tags: tag })
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
+      .limit(toLimit(limit, 8, MAX_PRODUCTS))
       .select("-__v")
       .populate('category', 'name slug')
       .populate('seller', 'name slug city state rating isVerified trustSeal');

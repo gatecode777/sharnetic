@@ -2,6 +2,7 @@ import Seller from '../models/Seller';
 import Product from '../models/Product';
 import Category from '../models/Category';
 import slugify from 'slugify';
+import { toPageNumber, toLimit, toSearchPattern } from '../query';
 
 // @desc    Get all sellers (with optional filters)
 // @route   GET /api/sellers
@@ -16,12 +17,13 @@ export const getAllSellers = async (req, res) => {
       query.$or = [{ mainCategory: category }, { categories: category }];
     }
 
-    if (city) {
-      query.city = { $regex: city.trim(), $options: 'i' };
+    const cityPattern = toSearchPattern(city);
+    if (cityPattern) {
+      query.city = { $regex: cityPattern, $options: 'i' };
     }
 
-    if (search && search.trim()) {
-      const s = search.trim();
+    const s = toSearchPattern(search);
+    if (s) {
       query.$or = [
         { name: { $regex: s, $options: 'i' } },
         { contactPerson: { $regex: s, $options: 'i' } },
@@ -30,16 +32,19 @@ export const getAllSellers = async (req, res) => {
       ];
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNumber = toPageNumber(page);
+    // 1000 = the largest "per page" option on the admin Suppliers screen.
+    const pageSize = toLimit(limit, 12, 1000);
+    const skip = (pageNumber - 1) * pageSize;
     const totalSellers = await Seller.countDocuments(query);
-    const totalPages = Math.ceil(totalSellers / parseInt(limit));
+    const totalPages = Math.ceil(totalSellers / pageSize);
 
     const sellers = await Seller.find(query)
       .populate('mainCategory', 'name slug')
       .populate('categories', 'name slug')
       .sort({ isVerified: -1, rating: -1, createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(pageSize);
 
     // Attach product count for each seller in a single fast aggregation
     const sellerIds = sellers.map((s) => s._id);
@@ -61,7 +66,7 @@ export const getAllSellers = async (req, res) => {
       sellers: sellersWithCounts,
       totalSellers,
       totalPages,
-      currentPage: parseInt(page),
+      currentPage: pageNumber,
     });
   } catch (error) {
     console.error('getAllSellers error:', error);

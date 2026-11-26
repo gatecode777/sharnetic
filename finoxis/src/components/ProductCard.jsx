@@ -130,12 +130,12 @@ const ProductCard = ({ product, onEnquiry }) => {
           {/* Seller / Supplier Snapshot (IndiaMART Style) */}
           <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">
             <div className="flex items-center justify-between mb-1">
-              <span className="font-bold text-gray-800 truncate block max-w-[180px]" title={sellerName}>
+              <span className="flex-1 min-w-0 mr-2 font-bold text-gray-800 truncate block" title={sellerName}>
                 <i className="fas fa-building text-blue-600 mr-1.5"></i>
                 {sellerName}
               </span>
               {seller.rating && (
-                <span className="bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded text-[10px] flex items-center">
+                <span className="flex-shrink-0 bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded text-[10px] flex items-center">
                   <i className="fas fa-star text-[9px] mr-1 text-green-600"></i>
                   {seller.rating}
                 </span>
@@ -143,12 +143,12 @@ const ProductCard = ({ product, onEnquiry }) => {
             </div>
 
             <div className="flex items-center justify-between text-gray-500 text-[11px]">
-              <span className="truncate">
+              <span className="min-w-0 mr-2 truncate">
                 <i className="fas fa-map-marker-alt text-gray-400 mr-1"></i>
                 {sellerCity}
               </span>
               {seller.isVerified !== false && (
-                <span className="text-blue-700 font-semibold flex items-center text-[10px]">
+                <span className="flex-shrink-0 text-blue-700 font-semibold flex items-center text-[10px]">
                   <i className="fas fa-shield-alt text-blue-500 mr-1"></i> Verified
                 </span>
               )}

@@ -1,0 +1,93 @@
+/*
+ * Phone and tablet layout fixes. Every rule sits inside a max-width media query,
+ * so laptop and desktop screens are not affected. Imported last in app/layout.jsx.
+ * (Header menu rules live in index.css.)
+ */
+
+/* ============ Phones + tablets (below 1024px) ============ */
+@media (max-width: 1023.98px) {
+  .main-nav-panel ul > li > a { display: flex; align-items: center; }
+
+  /* Contact: keep the text clear of the field icons. */
+  .contact-page .input-wrapper input,
+  .contact-page .textarea-wrapper textarea { padding-left: 40px !important; }
+
+  /* Profile: all tabs visible, long names / emails wrap inside their cards. */
+  .profile-page .sidebar-nav { flex-wrap: wrap; overflow-x: visible; }
+  .profile-page p,
+  .profile-page span,
+  .profile-page h2,
+  .profile-page h3 { overflow-wrap: anywhere; }
+  .profile-page .detail-row > * { min-width: 0; }
+
+  /* Long words, emails and links in text pages. */
+  .app main,
+  .app p,
+  .app td { overflow-wrap: break-word; }
+}
+
+/* ============ Tablets (768px - 1023px) ============ */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  /* Homepage categories: 3 per row instead of 5 squeezed ones. */
+  #categories .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  /* Four-column blocks (benefits, footer): 2 per row. */
+  .app .md\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* About statistics: 2 per row on tablets, 1 per row on phones. */
+@media (min-width: 600px) and (max-width: 1023.98px) {
+  .about-page .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
+
+/* ============ Phones (below 640px) ============ */
+@media (max-width: 639.98px) {
+  .app .flex-1 { min-width: 0; }
+
+  /* Section titles: let the "View all" link drop to its own line. */
+  .app section > .flex.justify-between { flex-wrap: wrap; gap: 8px; }
+}
+
+@media (max-width: 599.98px) {
+  .about-page .stats-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .about-page .stat-card { min-width: 0; padding: 20px 12px; flex-wrap: wrap; justify-content: center; }
+}
+
+/* ============ Admin panel (1024px and below, same breakpoint as AdminLayout.css) ============ */
+.admin-backdrop { display: none; }
+
+@media (max-width: 1024px) {
+  /* Sidebar stays hidden until the menu button opens it. */
+  .admin-layout .admin-sidebar,
+  .admin-layout.sidebar-open .admin-sidebar { transform: translateX(-100%); }
+  .admin-layout.mobile-open .admin-sidebar { transform: translateX(0); width: 280px; max-width: 85vw; }
+  .admin-layout .admin-sidebar .sidebar-nav { display: block; overflow-x: hidden; }
+  .admin-layout.mobile-open .admin-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  .admin-layout .admin-main { margin-left: 0; min-width: 0; width: 100%; }
+  .admin-layout .admin-content { min-width: 0; }
+
+  /* Wide tables scroll inside their own box instead of stretching the page. */
+  .admin-content .table-container,
+  .admin-content .users-table-container,
+  .admin-content .orders-table-container,
+  .admin-content .categories-table-container { overflow-x: auto; max-width: 100%; }
+  .admin-content .dashboard-content > * { min-width: 0; }
+
+  /* Toolbars and button rows wrap onto new lines. */
+  .admin-content .page-header-u,
+  .admin-content .header-actions,
+  .admin-content .filter-buttons,
+  .admin-content .filter-tabs { flex-wrap: wrap; gap: 12px; }
+}
+
+/* Admin form fields never stick out of their card. */
+@media (max-width: 1024px) {
+  .admin-content select,
+  .admin-content input { max-width: 100%; }
+}
